@@ -1,0 +1,118 @@
+{
+  "projectType": "saas",
+  "projectName": "Plugdata",
+  "projectDescription": "Pure Data as a plugin with a modern GUI, enabling visual audio programming in DAWs and standalone.",
+  "theme": "mint",
+  "primaryColor": "#ea8c36",
+  "lightColor": "#69a1be",
+  "darkColor": "#f8f8f8",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/patching-basics",
+              "concepts/objects-and-connections",
+              "concepts/plugin-vs-standalone",
+              "concepts/daw-integration"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guides/interface-overview",
+              "guides/creating-patches",
+              "guides/using-objects",
+              "guides/automation-parameters",
+              "guides/presets-and-settings",
+              "guides/audio-routing"
+            ]
+          },
+          {
+            "group": "Objects Reference",
+            "pages": [
+              "objects/overview",
+              "objects/plugdata-objects",
+              "objects/else-library",
+              "objects/cyclone-library",
+              "objects/vanilla-objects"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/building-from-source",
+              "advanced/adding-externals",
+              "advanced/lua-scripting",
+              "advanced/gem-graphics",
+              "advanced/performance-optimization"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/troubleshooting",
+              "resources/faq",
+              "resources/community",
+              "resources/contributing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Plugin Objects",
+            "pages": [
+              "api/param",
+              "api/playhead",
+              "api/plugin-latency",
+              "api/daw-storage"
+            ]
+          },
+          {
+            "group": "Core Classes",
+            "pages": [
+              "api/plugin-processor",
+              "api/canvas",
+              "api/pd-instance"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Visual audio programming with Pure Data",
+    "Plugin formats: VST3, AU, AUv3, LV2, CLAP",
+    "Standalone application mode",
+    "DAW automation and playhead integration",
+    "Built-in ELSE and Cyclone object libraries",
+    "Modern JUCE-based GUI interface",
+    "Lua scripting support via pd-lua",
+    "Gem graphics library integration",
+    "Cross-platform: Windows, macOS, Linux"
+  ],
+  "publicApiSurface": [
+    "param - DAW automation parameter object",
+    "playhead - DAW playhead information object",
+    "plugin_latency - Plugin latency compensation object",
+    "daw_storage - DAW state storage object",
+    "PluginProcessor - Main audio processor class",
+    "Canvas - Visual patching canvas",
+    "pd::Instance - Pure Data instance wrapper",
+    "Object - Base class for patch objects"
+  ]
+}

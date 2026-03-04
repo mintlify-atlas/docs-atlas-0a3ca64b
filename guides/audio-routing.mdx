@@ -1,0 +1,613 @@
+---
+title: Audio Routing
+description: Master audio input/output, channel configuration, multichannel patches, and MIDI routing in plugdata
+---
+
+# Audio Routing
+
+This guide covers everything you need to know about routing audio and MIDI in plugdata, from basic stereo I/O to complex multichannel configurations.
+
+## Understanding Audio in Plugdata
+
+### Signal Flow
+
+Audio flows through plugdata in this order:
+
+<Steps>
+  <Step title="Audio Input">
+    Physical inputs or DAW tracks enter via `[adc~]` objects
+  </Step>
+  
+  <Step title="Signal Processing">
+    Audio-rate objects (marked with ~) process signals
+  </Step>
+  
+  <Step title="Audio Output">
+    Processed audio exits via `[dac~]` to physical outputs or DAW
+  </Step>
+</Steps>
+
+**Key Concepts:**
+- **Sample Rate** - Samples per second (44100, 48000, 96000 Hz)
+- **Block Size** - Samples processed per cycle (affects latency)
+- **Channels** - Separate audio streams (mono=1, stereo=2, etc.)
+- **Signal vs Message** - Audio runs at sample rate, messages at block rate
+
+## Audio Input with [adc~]
+
+### Basic Input
+
+The `[adc~]` object receives audio from external sources:
+
+```pd
+[adc~]              # All enabled inputs
+  |
+[dac~]              # Pass through to output
+```
+
+### Channel Selection
+
+Specify which input channels to use:
+
+<Tabs>
+  <Tab title="Stereo Input">
+    Receive left and right channels:
+    
+    ```pd
+    [adc~ 1 2]        # Channels 1 and 2 (L/R)
+      |   |
+      |   [*~ 0.5]    # Process right channel
+      |   |
+    [dac~ 1 2]        # Output to L/R
+    ```
+  </Tab>
+  
+  <Tab title="Mono Input">
+    Receive a single channel:
+    
+    ```pd
+    [adc~ 1]          # Channel 1 only
+      |
+    [*~ 2]            # Process
+      |
+    [dac~ 1 2]        # Send to both outputs
+    ```
+  </Tab>
+  
+  <Tab title="Multiple Inputs">
+    Receive multiple discrete channels:
+    
+    ```pd
+    [adc~ 1 2 3 4]    # Four channels
+      |  |  |  |
+      |  |  |  [*~ 0.8]  # Process channel 4
+      |  |  |  |
+    [dac~ 1 2 3 4]    # Output four channels
+    ```
+  </Tab>
+  
+  <Tab title="Specific Channels">
+    Select non-consecutive channels:
+    
+    ```pd
+    [adc~ 1 3 5]      # Channels 1, 3, and 5
+      |  |  |
+    [dac~ 2 4 6]      # Output to different channels
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+Channel numbers start at 1. Available channels depend on your audio interface configuration.
+</Note>
+
+### Monitoring Input Levels
+
+Visualize input levels:
+
+```pd
+[adc~ 1 2]          # Stereo input
+  |   |
+  |   [env~]          # Envelope follower
+  |     |
+  |   [- 100]         # Convert to dB
+  |     |
+  |   [nbx]           # Display level
+  |
+[*~ 0]              # Mute (monitoring only)
+```
+
+## Audio Output with [dac~]
+
+### Basic Output
+
+The `[dac~]` object sends audio to external destinations:
+
+```pd
+[osc~ 440]          # Generate tone
+  |
+[*~ 0.5]            # Volume
+  |
+[dac~]              # Output to all enabled channels
+```
+
+### Stereo Output
+
+Most common configuration:
+
+```pd
+# Stereo synth voice
+[osc~ 440]          # Oscillator
+  |
+[*~ 0.5]            # Amplitude
+  |
+  +------+
+  |      |
+[dac~ 1 2]          # Left and right output
+```
+
+### Panning
+
+Distribute mono signal across stereo field:
+
+```pd
+[osc~ 440]          # Mono source
+  |
+  +--------+
+  |        |
+[*~]      [*~]      # Left/right gain
+  |        |
+[dac~ 1 2]          # Stereo output
+  ^
+  |
+[hsl]               # Pan control (0-1)
+  |
+[pack 0 0]
+  |
+[expr $f1; 1-$f1]   # Calculate L/R gains
+```
+
+Or use the ELSE library:
+
+```pd
+[osc~ 440]
+  |
+[pan~ 0]            # Pan position -1 to 1
+  |   |
+[dac~ 1 2]
+```
+
+### Multichannel Output
+
+Route to multiple outputs:
+
+```pd
+# Quad output (4 speakers)
+[noise~]            # Noise source
+  |
+  +-------+-------+-------+
+  |       |       |       |
+[dac~ 1   2       3       4]
+# Front-L Front-R Rear-L Rear-R
+```
+
+## Multichannel Patches
+
+### Configuring Channels
+
+Set up multichannel I/O:
+
+<Steps>
+  <Step title="Standalone Mode">
+    Settings > Audio > Select input/output channels to enable
+  </Step>
+  
+  <Step title="Plugin Mode">
+    Configure in your DAW:
+    - Set track input/output channel count
+    - Route hardware or virtual channels
+    - Check plugin I/O configuration
+  </Step>
+</Steps>
+
+### Multichannel Processing
+
+Process multiple channels efficiently:
+
+```pd
+# 8-channel reverb
+[adc~ 1 2 3 4 5 6 7 8]      # 8 inputs
+  |   |   |   |   |   |   |   |
+  |   |   |   |   |   |   |   [freeverb~]  # Reverb each
+  |   |   |   |   |   |   |   |
+[dac~ 1 2 3 4 5 6 7 8]      # 8 outputs
+```
+
+### Matrix Routing
+
+Create flexible routing matrix:
+
+```pd
+# Simple 4x4 matrix
+[adc~ 1 2 3 4]      # 4 inputs
+  |   |   |   |
+  |   |   |   +---[*~ 0]---+
+  |   |   +-------[*~ 0]---+---[+~]---[dac~ 4]
+  |   +-----------[*~ 0]---+---[+~]---[dac~ 3]
+  +---------------[*~ 1]---+---[+~]---[dac~ 2]
+                  [*~ 0]---+---[+~]---[dac~ 1]
+                  
+# Control with matrix of number boxes or sliders
+```
+
+<Tip>
+Use abstractions to create reusable multichannel processors. Pass channel count as argument.
+</Tip>
+
+## Channel Configuration
+
+### Standalone Channel Setup
+
+<Accordion title="Input Configuration">
+  **Settings > Audio > Input Channels**
+  
+  - Enable needed input channels
+  - Disable unused channels to save CPU
+  - Test with `[adc~]` and `[env~]`
+  - Check physical connections
+</Accordion>
+
+<Accordion title="Output Configuration">
+  **Settings > Audio > Output Channels**
+  
+  - Enable output channels for your setup
+  - Match your speaker/monitor configuration
+  - Test with `[osc~]` to each output
+</Accordion>
+
+### Plugin Channel Setup  
+
+In DAW mode:
+
+1. **Set track channel count** in DAW
+2. **Insert plugdata** on multichannel track  
+3. **Configure routing** in patch with `[adc~]` and `[dac~]`
+4. **Enable channels** as needed in DAW mixer
+
+**Common Configurations:**
+- **Mono** - 1 in, 1 out (single instruments)
+- **Stereo** - 2 in, 2 out (most common)
+- **Quad** - 4 in, 4 out (surround)
+- **Multi** - Any configuration for stems/busses
+
+## MIDI Routing
+
+### MIDI Input
+
+Receive MIDI messages:
+
+<Tabs>
+  <Tab title="Note Messages">
+    Receive note on/off:
+    
+    ```pd
+    [notein]          # Receive notes
+      |    |    |
+      |    |  [print channel]
+      |  [print velocity]  
+    [print pitch]
+    ```
+    
+    Or for specific channel:
+    ```pd
+    [notein 1]        # Channel 1 only
+    ```
+  </Tab>
+  
+  <Tab title="Control Change">
+    Receive CC messages:
+    
+    ```pd
+    [ctlin]           # All CC messages
+      |    |    |
+      |    |  [print channel]
+      |  [print cc_number]
+    [print value]
+    
+    [ctlin 1]         # CC 1 (mod wheel) only
+    ```
+  </Tab>
+  
+  <Tab title="Pitch Bend">
+    Receive pitch bend:
+    
+    ```pd
+    [bendin]          # Pitch bend
+      |    |
+      |  [print channel]
+    [- 8192]          # Center at 0
+      |
+    [/ 8192]          # Normalize to -1 to 1
+    ```
+  </Tab>
+  
+  <Tab title="Program Change">
+    Receive program changes:
+    
+    ```pd
+    [pgmin]           # Program changes
+      |    |
+      |  [print channel]
+    [print program]
+    ```
+  </Tab>
+</Tabs>
+
+### MIDI Output
+
+Send MIDI messages:
+
+```pd
+# Send notes
+[makenote 100 500]  # Velocity 100, duration 500ms
+  |    |
+[noteout 1]         # Send to MIDI channel 1
+
+# Send CC
+[pack 0 0]
+  |
+[ctlout 1]          # CC number, value, channel
+
+# Send pitch bend  
+[*  8192]           # Scale
+  |
+[+ 8192]            # Offset
+  |
+[bendout 1]         # Channel 1
+```
+
+### MIDI to Audio
+
+Convert MIDI to audio signals:
+
+```pd
+# Simple synth
+[notein]            # Receive MIDI
+  |    |
+  |  [/ 127]        # Normalize velocity
+  |    |
+[mtof] |
+  |    |
+[osc~] |
+  |    |
+  +----+
+     |
+   [*~]             # Apply velocity
+     |
+   [*~ 0.5]         # Master volume
+     |
+   [dac~]
+```
+
+<Note>
+Use `[mtof]` to convert MIDI note numbers to frequency in Hz.
+</Note>
+
+## Managing Latency
+
+### Understanding Latency
+
+Total latency comes from:
+
+1. **ADC latency** - Analog to digital conversion
+2. **Buffer latency** - Processing buffer size  
+3. **DAC latency** - Digital to analog conversion
+4. **Plugin latency** - Additional processing delay
+
+**Formula:**
+```
+Latency (ms) = (Buffer Size / Sample Rate) × 1000
+
+Example: (256 samples / 48000 Hz) × 1000 = 5.33ms
+```
+
+### Buffer Size Selection
+
+Choose based on your needs:
+
+<Tabs>
+  <Tab title="Low Latency">
+    **Buffer: 64-128 samples**
+    
+    **Pros:**
+    - Minimal delay (1.5-3ms at 48kHz)
+    - Good for live performance
+    - Real-time MIDI input feels responsive
+    
+    **Cons:**  
+    - Higher CPU usage
+    - Risk of audio dropouts
+    - May not work on slower systems
+    
+    **Best for:**
+    - Live instrument playing
+    - MIDI controllers
+    - Real-time effects
+  </Tab>
+  
+  <Tab title="Balanced">
+    **Buffer: 256-512 samples**
+    
+    **Pros:**
+    - Reasonable latency (5-11ms at 48kHz)
+    - Stable performance
+    - Works on most systems
+    
+    **Cons:**
+    - Slightly noticeable delay
+    - Not ideal for fast MIDI input
+    
+    **Best for:**
+    - General music production
+    - Most synthesis tasks
+    - Effect processing
+  </Tab>
+  
+  <Tab title="High Stability">
+    **Buffer: 512-1024+ samples**
+    
+    **Pros:**
+    - Very stable
+    - Low CPU usage
+    - Complex patches run smoothly
+    
+    **Cons:**
+    - Noticeable latency (11-23ms+)
+    - Not suitable for live playing
+    
+    **Best for:**
+    - Offline rendering
+    - Complex processing
+    - CPU-intensive patches
+  </Tab>
+</Tabs>
+
+### Latency Monitoring
+
+Check current latency:
+
+1. **Statusbar** - Displays current latency in ms
+2. **Settings** - Audio panel shows buffer size
+3. **DAW** - Check plugin delay compensation settings
+
+### Reducing Latency
+
+<Steps>
+  <Step title="Decrease Buffer Size">
+    Settings > Audio > Reduce buffer size (if system can handle it)
+  </Step>
+  
+  <Step title="Optimize Patch">
+    - Remove unnecessary processing
+    - Disable unused GUI updates  
+    - Use efficient objects
+  </Step>
+  
+  <Step title="Adjust Sample Rate">
+    Lower sample rate = less CPU, but less frequency response
+  </Step>
+  
+  <Step title="Use ASIO (Windows)">
+    ASIO drivers typically offer lower latency than DirectSound
+  </Step>
+</Steps>
+
+<Warning>
+Very small buffer sizes may cause audio crackling or dropouts. Increase buffer if you hear glitches.
+</Warning>
+
+## Advanced Routing Techniques
+
+### Send/Return Buses
+
+Create effect sends:
+
+```pd
+# Main signal
+[adc~ 1 2]          # Input
+  |   |
+  |   +--------[send~ reverb_send]  # Send to reverb
+  |   |
+[dac~ 1 2]          # Dry output
+
+# Reverb return
+[receive~ reverb_send]
+  |   |
+[freeverb~]         # Reverb effect
+  |   |
+[*~ 0.3]            # Wet level
+  |   |
+[dac~ 1 2]          # Add to output
+```
+
+### Sidechain Routing
+
+Use one signal to control another:
+
+```pd
+# Sidechain compression
+[adc~ 1]            # Main signal (bass)
+  |
+[*~]                # VCA
+  |
+[dac~ 1]
+  ^
+  |
+[- 1]               # Invert
+  |
+[env~]              # Envelope follower
+  |
+[adc~ 2]            # Control signal (kick)
+```
+
+### Multi-Effect Chains
+
+Route signal through multiple effects:
+
+```pd
+[adc~ 1 2]
+  |   |
+[lop~ 2000]         # EQ
+  |   |  
+[compressor~]       # Dynamics
+  |   |
+[chorus~]           # Modulation
+  |   |
+[freeverb~]         # Reverb
+  |   |
+[dac~ 1 2]
+```
+
+## Troubleshooting Audio
+
+<Accordion title="No Audio Output">
+  **Check:**
+  - DSP enabled (power button in statusbar)
+  - Volume not at zero
+  - Correct output device selected
+  - `[dac~]` connected properly
+  - Audio not muted in DAW (plugin mode)
+</Accordion>
+
+<Accordion title="Audio Crackling">
+  **Solutions:**
+  - Increase buffer size
+  - Close other applications
+  - Simplify patch
+  - Check CPU meter
+  - Update audio drivers
+</Accordion>
+
+<Accordion title="Wrong Channels">
+  **Verify:**
+  - Channel numbers in `[adc~]` and `[dac~]`
+  - Physical cable connections
+  - Audio interface channel mapping
+  - DAW routing (plugin mode)
+</Accordion>
+
+<Accordion title="High Latency">
+  **Fixes:**
+  - Reduce buffer size
+  - Use ASIO drivers (Windows)
+  - Close unnecessary programs
+  - Check DAW delay compensation settings
+</Accordion>
+
+## Next Steps
+
+You now understand audio routing in plugdata:
+
+- [Creating Patches](/guides/creating-patches) - Build patches with proper audio routing
+- [Using Objects](/guides/using-objects) - Learn more audio processing objects
+- [Performance Optimization](/advanced/performance-optimization) - Optimize patches for low latency

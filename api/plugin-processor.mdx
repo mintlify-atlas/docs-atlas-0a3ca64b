@@ -1,0 +1,280 @@
+---
+title: "PluginProcessor"
+description: "Core audio processor and Pure Data instance manager"
+---
+
+## Overview
+
+The `PluginProcessor` class is the heart of plugdata. It inherits from both JUCE's `AudioProcessor` and plugdata's `pd::Instance`, combining DAW plugin functionality with Pure Data patch management and DSP processing.
+
+Location: `Source/PluginProcessor.h`
+
+## Class Hierarchy
+
+```cpp
+class PluginProcessor final : public AudioProcessor
+                             , public pd::Instance
+                             , public SettingsFileListener
+```
+
+**Inherits from:**
+- `AudioProcessor` - JUCE's audio plugin base class
+- `pd::Instance` - Pure Data instance wrapper
+- `SettingsFileListener` - Settings file change notifications
+
+## Key Methods
+
+### Audio Processing
+
+<ParamField path="prepareToPlay" type="void">
+  ```cpp
+  void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+  ```
+  
+  Called before audio processing starts. Initializes:
+  - Sample rate configuration
+  - Buffer sizes
+  - DSP preparation
+  - Internal synthesis setup
+</ParamField>
+
+<ParamField path="processBlock" type="void">
+  ```cpp
+  void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiBuffer) override;
+  ```
+  
+  Main audio processing callback. Called by the DAW for each audio block. Handles:
+  - Audio input/output routing
+  - MIDI message processing  
+  - Pure Data DSP execution
+  - Oversampling (if enabled)
+  - Output limiting (if enabled)
+</ParamField>
+
+<ParamField path="processBlockBypassed" type="void">
+  ```cpp
+  void processBlockBypassed(AudioBuffer<float>& buffer, MidiBuffer& midiBuffer) override;
+  ```
+  
+  Called when the plugin is bypassed. Ensures clean audio passthrough.
+</ParamField>
+
+### DSP Configuration
+
+<ParamField path="setOversampling" type="void">
+  ```cpp
+  void setOversampling(int amount);
+  ```
+  
+  Configure oversampling factor:
+  - `0` = No oversampling (default)
+  - `1` = 2x oversampling
+  - `2` = 4x oversampling  
+  - `3` = 8x oversampling
+  
+  Higher oversampling reduces aliasing but increases CPU usage.
+</ParamField>
+
+<ParamField path="setEnableLimiter" type="void">
+  ```cpp
+  void setEnableLimiter(bool enabled);
+  void setLimiterThreshold(int amount);
+  bool getEnableLimiter();
+  ```
+  
+  Control the output safety limiter:
+  - Prevents output clipping
+  - Removes non-finite numbers (NaN, infinity)
+  - Enabled by default for protection
+</ParamField>
+
+### Parameter Management
+
+<ParamField path="enableAudioParameter" type="void">
+  ```cpp
+  void enableAudioParameter(SmallString const& name);
+  void disableAudioParameter(SmallString const& name);
+  SmallArray<PlugDataParameter*> getEnabledParameters();
+  void updateEnabledParameters();
+  ```
+  
+  Manage DAW automation parameters. Parameters are created via the `[param]` object and must be enabled to appear in the DAW.
+</ParamField>
+
+<ParamField path="sendParameters" type="void">
+  ```cpp
+  void sendParameters();
+  ```
+  
+  Send current parameter values to Pure Data. Called during automation playback.
+</ParamField>
+
+### Playhead and Transport
+
+<ParamField path="sendPlayhead" type="void">
+  ```cpp
+  void sendPlayhead();
+  ```
+  
+  Send DAW playhead information to Pure Data. This data is received by the `[playhead]` object. Includes:
+  - Transport state (playing/stopped/recording)
+  - Position (PPQ, samples, seconds)
+  - Tempo (BPM)
+  - Time signature
+  - Loop points
+  - Frame rate
+</ParamField>
+
+### Patch Management
+
+<ParamField path="loadPatch" type="pd::Patch::Ptr">
+  ```cpp
+  pd::Patch::Ptr loadPatch(String patch);
+  pd::Patch::Ptr loadPatch(URL const& patchURL);
+  ```
+  
+  Load a Pure Data patch from a string or URL. Returns a smart pointer to the loaded patch.
+</ParamField>
+
+<ParamField path="findPatchInPluginMode" type="pd::Patch::Ptr">
+  ```cpp
+  pd::Patch::Ptr findPatchInPluginMode(int editorIndex);
+  ```
+  
+  Find the patch associated with a specific editor window.
+</ParamField>
+
+### MIDI Handling
+
+<ParamField path="receiveNoteOn" type="void">
+  ```cpp
+  void receiveNoteOn(int channel, int pitch, int velocity) override;
+  void receiveControlChange(int channel, int controller, int value) override;
+  void receiveProgramChange(int channel, int value) override;
+  void receivePitchBend(int channel, int value) override;
+  void receiveAftertouch(int channel, int value) override;
+  void receivePolyAftertouch(int channel, int pitch, int value) override;
+  void receiveMidiByte(int port, int byte) override;
+  ```
+  
+  Callbacks for MIDI messages coming from Pure Data (sent to DAW).
+</ParamField>
+
+<ParamField path="sendMidiBuffer" type="void">
+  ```cpp
+  void sendMidiBuffer(int device, MidiBuffer const& buffer);
+  ```
+  
+  Send MIDI messages to a specific MIDI device.
+</ParamField>
+
+### State Management
+
+<ParamField path="getStateInformation" type="void">
+  ```cpp
+  void getStateInformation(MemoryBlock& destData) override;
+  void setStateInformation(void const* data, int sizeInBytes) override;
+  ```
+  
+  Serialize and deserialize plugin state for DAW session save/load. Includes:
+  - Patch contents
+  - Parameter values
+  - Extra data from `[daw_storage]`
+  - UI state
+</ParamField>
+
+<ParamField path="fillDataBuffer" type="void">
+  ```cpp
+  void fillDataBuffer(SmallArray<pd::Atom> const& list) override;
+  void parseDataBuffer(XmlElement const& xml) override;
+  ```
+  
+  Handle data storage from `[daw_storage]` objects. Data is serialized to XML and stored with the plugin state.
+</ParamField>
+
+### Latency Compensation
+
+<ParamField path="performLatencyCompensationChange" type="void">
+  ```cpp
+  void performLatencyCompensationChange(float value) override;
+  ```
+  
+  Called when `[plugin_latency]` reports latency. Updates the DAW's latency compensation.
+</ParamField>
+
+## Properties
+
+<ResponseField name="settingsFile" type="SettingsFile*">
+  Global settings file manager. Contains user preferences and configuration.
+</ResponseField>
+
+<ResponseField name="objectLibrary" type="pd::Library*">
+  Object library for searching and accessing Pure Data object documentation.
+</ResponseField>
+
+<ResponseField name="oversampling" type="AtomicValue<int>">
+  Current oversampling factor (0 = none, 1 = 2x, 2 = 4x, 3 = 8x).
+</ResponseField>
+
+<ResponseField name="enableLimiter" type="AtomicValue<bool>">
+  Whether the output safety limiter is enabled (default: true).
+</ResponseField>
+
+<ResponseField name="volume" type="AtomicValue<float>*">
+  Master output volume control.
+</ResponseField>
+
+<ResponseField name="tailLength" type="Value">
+  Plugin tail length in seconds (for reverb, delay, etc.).
+</ResponseField>
+
+<ResponseField name="openedEditors" type="OwnedArray<PluginEditor>">
+  All currently open editor windows.
+</ResponseField>
+
+## Constants
+
+<ResponseField name="numParameters" type="static constexpr int">
+  Maximum number of DAW parameters: **512**
+</ResponseField>
+
+<ResponseField name="numInputBuses" type="static constexpr int">
+  Maximum number of input buses: **16**
+</ResponseField>
+
+<ResponseField name="numOutputBuses" type="static constexpr int">
+  Maximum number of output buses: **16**
+</ResponseField>
+
+## Usage Example
+
+```cpp
+// Access from within plugdata
+auto* processor = getProcessor();
+
+// Enable oversampling
+processor->setOversampling(2); // 4x oversampling
+
+// Load a patch
+auto patch = processor->loadPatch(File("/path/to/patch.pd"));
+
+// Get enabled parameters
+auto params = processor->getEnabledParameters();
+for (auto* param : params) {
+    DBG("Parameter: " + param->getName());
+}
+
+// Check if limiter is enabled
+if (processor->getEnableLimiter()) {
+    DBG("Safety limiter is active");
+}
+```
+
+## See Also
+
+- `pd::Instance` - Pure Data instance wrapper (Source/Pd/Instance.h)
+- `Canvas` - Patch canvas and object management
+- `PluginEditor` - UI editor component
+- `[param]` - Parameter object
+- `[playhead]` - Playhead object
+- `[plugin_latency]` - Latency reporting object

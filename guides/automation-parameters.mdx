@@ -1,0 +1,477 @@
+---
+title: Automation Parameters  
+description: Learn how to use the [param] object for DAW automation in plugdata, including parameter creation, mapping, and modes
+---
+
+# Automation Parameters
+
+Plugdata allows you to expose patch parameters to your DAW for automation using the `[param]` object. This guide covers everything you need to know about creating, managing, and using automation parameters.
+
+<Note>
+Automation parameters are primarily used when running plugdata as a plugin in a DAW. In standalone mode, parameters can still be created and controlled via MIDI or OSC.
+</Note>
+
+## Understanding Parameters
+
+### What are Parameters?
+
+Parameters are values in your patch that can be:
+- **Automated** in your DAW timeline
+- **Controlled** by MIDI CC or other controllers  
+- **Saved** with your DAW project
+- **Displayed** in your DAW's plugin interface
+- **Modulated** by DAW envelopes and LFOs
+
+### The [param] Object
+
+The `[param]` object bridges your Pd patch and DAW automation:
+
+```pd
+[param filter_cutoff]
+  |
+[lop~ 1000]        # Control filter cutoff from DAW
+```
+
+## Creating Parameters
+
+### Using the Automation Panel
+
+The easiest way to create parameters:
+
+<Steps>
+  <Step title="Open Automation Panel">
+    Click the **Parameters** tab in the sidebar (or press Cmd/Ctrl+B and select it)
+  </Step>
+  
+  <Step title="Click + Button">
+    Click the **+** button at the bottom of the panel to create a new parameter
+  </Step>
+  
+  <Step title="Configure Parameter">
+    Set the parameter properties:
+    - **Name** - Descriptive name (e.g., "Filter Cutoff")
+    - **Range** - Minimum and maximum values
+    - **Mode** - Float, Integer, Logarithmic, or Exponential
+  </Step>
+  
+  <Step title="Add to Patch">
+    Drag the parameter from the panel onto your canvas to create a `[param]` object
+  </Step>
+</Steps>
+
+### Creating [param] Objects Directly
+
+You can also create parameters directly in your patch:
+
+```pd
+# Basic parameter
+[param volume]
+
+# Parameter with auto-handling
+[param volume 1]
+
+# The parameter will appear in the Automation Panel
+```
+
+**Arguments:**
+1. **Symbol** - Parameter name (required)
+2. **Float** - Enable auto-handling (0 or 1, default: 0)
+
+<Tip>
+Use descriptive, unique names for parameters. Spaces are allowed: `[param Filter Cutoff]`
+</Tip>
+
+## Parameter Configuration
+
+### Setting Parameter Range
+
+Configure the minimum and maximum values:
+
+<Tabs>
+  <Tab title="Via Automation Panel">
+    1. Click the expand arrow (▸) on the parameter
+    2. Adjust **Range** with the min/max fields
+    3. Values update immediately in the DAW
+  </Tab>
+  
+  <Tab title="Via Messages">
+    Send a `range` message to the parameter:
+    
+    ```pd
+    [range 20 20000(     # Set range 20Hz to 20kHz
+      |
+    [param filter_freq]
+    ```
+  </Tab>
+</Tabs>
+
+**Common Ranges:**
+- **Volume:** 0 to 1 (or 0 to 127 for MIDI-style)
+- **Frequency:** 20 to 20000 Hz
+- **Percentage:** 0 to 100
+- **Pan:** -1 to 1 or 0 to 127
+
+### Parameter Modes
+
+Choose the scaling mode that fits your parameter:
+
+<Accordion title="Float (Mode 1)">
+  **Linear floating-point values**
+  
+  - Default mode
+  - Continuous values with decimals
+  - Even spacing across range
+  
+  **Best for:**
+  - Volume controls
+  - Pan positions
+  - Mix amounts
+  
+  ```pd
+  [mode 1(
+    |
+  [param mix]
+  ```
+</Accordion>
+
+<Accordion title="Integer (Mode 2)">
+  **Whole number values only**
+  
+  - Steps in integer increments
+  - No decimal values
+  
+  **Best for:**
+  - Selection indices
+  - Step sequencer steps
+  - Waveform selection
+  
+  ```pd
+  [mode 2(
+    |
+  [param waveform]  # 0=sine, 1=saw, 2=square
+  ```
+</Accordion>
+
+<Accordion title="Logarithmic (Mode 3)">
+  **Logarithmic scaling**
+  
+  - More resolution at low values
+  - Less resolution at high values
+  - Matches human perception
+  
+  **Best for:**
+  - Frequency controls
+  - Filter cutoffs
+  - Decay times
+  
+  ```pd
+  [mode 3(
+    |
+  [param filter_freq]  # Range: 20-20000 Hz
+  ```
+</Accordion>
+
+<Accordion title="Exponential (Mode 4)">
+  **Exponential scaling**
+  
+  - More resolution at high values
+  - Less resolution at low values
+  
+  **Best for:**
+  - Envelope times (when you need precision at longer times)
+  - Some specialized controls
+  
+  ```pd
+  [mode 4(
+    |
+  [param release_time]
+  ```
+</Accordion>
+
+### Auto-Handling Mode
+
+The second argument enables automatic DAW communication:
+
+```pd
+[param volume 1]   # Auto-handling enabled
+```
+
+**With auto-handling (1):**
+- Automatically reports changes to DAW
+- Handles gesture begin/end for automation recording
+- Best for most use cases
+
+**Without auto-handling (0):**
+- Manual control over change reporting
+- Use second inlet to control change state
+- For advanced automation scenarios
+
+## Using Parameters in Patches
+
+### Basic Parameter Control
+
+```pd
+# Simple volume control
+[param master_volume]
+  |
+[/ 100]              # Scale 0-100 to 0-1
+  |
+[*~]                 # Apply to audio signal
+```
+
+### Mapping to GUI Objects
+
+Connect parameters to number boxes and sliders:
+
+```pd
+# Two-way parameter/GUI connection
+[nbx]                # Number box
+  |  |
+  |  [param cutoff]  # Parameter follows number box
+  |    |
+  +----+             # And number box follows parameter
+```
+
+### Multiple Parameters
+
+Create complex control structures:
+
+```pd
+# Synthesizer voice parameters
+[param pitch]        [param volume]      [param filter]
+     |                    |                    |
+  [mtof]              [/ 127]              [/ 127]
+     |                    |                    |
+  [osc~]                [*~]               [lop~]
+     |                    |                    |
+     +--------------------+--------------------+
+                          |
+                       [dac~]
+```
+
+## Advanced Parameter Techniques
+
+### Parameter Smoothing
+
+Avoid zipper noise with smoothing:
+
+```pd
+[param filter_cutoff]
+  |
+[line~]              # Smooth parameter changes
+  |
+[lop~]               # Smoother filter response
+```
+
+### Parameter Scaling
+
+Transform parameter ranges:
+
+```pd
+# Map 0-1 parameter to 20-20000 Hz logarithmically
+[param freq_control]  # Range: 0 to 1
+  |
+[expr pow(20000/20, $f1) * 20]  
+  |
+[lop~ $1]            # Frequency in Hz
+```
+
+### Conditional Parameters
+
+Use parameters to switch behavior:
+
+```pd
+[param filter_type]  # Range: 0 to 2 (integer mode)
+  |
+[select 0 1 2]
+  |   |   |
+  |   |   [send~ highpass]
+  |   [send~ bandpass]  
+  [send~ lowpass]
+
+[receive~ lowpass]
+  |
+[lop~ 1000]
+  |
+[outlet~]
+```
+
+### Parameter Groups
+
+Organize related parameters:
+
+```pd
+# Oscillator group
+[param osc_freq]     [param osc_shape]   [param osc_width]
+
+# Filter group  
+[param filt_cutoff]  [param filt_res]    [param filt_type]
+
+# Envelope group
+[param env_attack]   [param env_decay]   [param env_release]
+```
+
+<Tip>
+Use consistent naming conventions like `section_parameter` (e.g., `filter_cutoff`, `filter_resonance`) to keep parameters organized.
+</Tip>
+
+## DAW Integration
+
+### Accessing Parameters in Your DAW
+
+Once parameters are created:
+
+<Steps>
+  <Step title="Load Plugin">
+    Open plugdata as a plugin in your DAW
+  </Step>
+  
+  <Step title="Find Parameters">
+    Parameters appear in:
+    - DAW's automation lane list
+    - Plugin parameter list
+    - Generic plugin UI (if supported)
+  </Step>
+  
+  <Step title="Automate">
+    Record or draw automation as with any plugin parameter
+  </Step>
+  
+  <Step title="Control">
+    Map to MIDI controllers, DAW faders, or modulation sources
+  </Step>
+</Steps>
+
+### Parameter Persistence
+
+Parameters are saved with:
+- **DAW Project** - Current parameter values
+- **Automation Data** - All automation lanes
+- **Plugin State** - When recalling presets
+
+### MIDI Mapping
+
+Connect MIDI CC to parameters:
+
+```pd
+[ctlin 1]            # MIDI CC 1 (mod wheel)
+  |
+[/ 127]              # Normalize to 0-1
+  |
+[param mod_amount]   # Control parameter via MIDI
+```
+
+## Parameter Best Practices
+
+### Naming Conventions
+
+✅ **Good names:**
+- `filter_cutoff`
+- `osc_1_pitch`  
+- `reverb_mix`
+- `envelope_attack`
+
+❌ **Avoid:**
+- `param1`, `param2` (not descriptive)
+- `x`, `y`, `z` (too generic)
+- Very long names (truncated in some DAWs)
+
+### Range Selection
+
+**Consider:**
+- Musical range (e.g., 20-20000 Hz for frequency)
+- User expectations (0-100 for percentage)
+- Control precision needed
+- Scaling mode (linear vs logarithmic)
+
+### Organization
+
+**For large patches:**
+1. Group related parameters by function
+2. Use consistent prefixes (osc_, filt_, env_)
+3. Order parameters logically in the automation panel
+4. Document parameter purposes in comments
+
+```pd
+[comment Oscillator Parameters]
+[param osc_frequency]  # 20-20000 Hz, logarithmic
+[param osc_detune]     # -100 to 100 cents, linear
+[param osc_wave]       # 0-3, integer (sine/saw/square/tri)
+```
+
+## Troubleshooting
+
+<Accordion title="Parameter Not Appearing in DAW">
+  **Solutions:**
+  - Ensure parameter is created before loading in DAW
+  - Try reloading the plugin
+  - Check parameter name doesn't have special characters
+  - Verify the parameter exists in the Automation Panel
+</Accordion>
+
+<Accordion title="Automation Not Working">
+  **Check:**
+  - Parameter is connected to something in the patch
+  - Patch is in run mode (not edit mode)
+  - DSP is enabled
+  - Automation is actually written in the DAW
+</Accordion>
+
+<Accordion title="Jumpy or Stepped Values">
+  **Solutions:**
+  - Add smoothing with [line~] for audio-rate control
+  - Check parameter mode (use float for smooth values)
+  - Increase update rate if using [snapshot~]
+</Accordion>
+
+<Accordion title="Range Issues">
+  **Fixes:**
+  - Verify range is set correctly in Automation Panel
+  - Check for scaling math errors in patch
+  - Use correct mode (logarithmic for frequency, etc.)
+</Accordion>
+
+## Example: Complete Synth Voice
+
+Here's a complete example using parameters:
+
+```pd
+# Oscillator section
+[param pitch]           # MIDI note number
+[param detune]          # -100 to 100 cents
+  |       |
+  |     [/ 100]          
+  |       |
+[mtof]  [+ 1]           # Convert to Hz and detune
+  |       |
+  +-------+
+      |
+   [osc~]
+      |
+# Filter section  
+   [*~]                 # VCA
+      |
+  [lop~]                # Filter
+      |
+   [*~]                 # Master volume
+      |
+   [dac~]
+
+# Parameter connections
+[param filter_cutoff]   # 20-20000 Hz, logarithmic
+  |
+[lop~ $1]
+
+[param amp_level]       # 0-1, linear
+  |
+[*~ $1]
+
+[param master_volume]   # 0-1, linear  
+  |
+[*~ $1]
+```
+
+## Next Steps
+
+- [Presets and Settings](/guides/presets-and-settings) - Save parameter states
+- [Audio Routing](/guides/audio-routing) - Set up complex audio flows and MIDI routing

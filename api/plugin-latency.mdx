@@ -1,0 +1,185 @@
+---
+title: "[plugin_latency]"
+description: "Set plugin latency compensation for DAW"
+---
+
+## Overview
+
+The `[plugin_latency]` object reports latency compensation values to the DAW. This is essential for plugins that introduce processing delay, such as lookahead compressors, linear-phase filters, or any algorithm that requires buffering audio before processing.
+
+When you report latency to the DAW, it will automatically compensate by delaying other tracks to keep everything in sync.
+
+## Inlets
+
+<ResponseField name="inlet_1" type="float">
+  Set DAW latency compensation value for the plugin, measured in **samples**.
+  
+  The DAW will delay all other tracks by this amount to compensate for the processing delay introduced by your plugin.
+</ResponseField>
+
+## Usage Example
+
+### Basic Latency Reporting
+
+```pd
+#N canvas 0 0 450 300;
+
+// Report 512 samples of latency
+[loadbang]
+|
+[512(
+|
+[plugin_latency]
+
+// Dynamic latency based on buffer size
+[r buffer_size]
+|
+[plugin_latency]
+```
+
+### Lookahead Limiter with Latency Compensation
+
+```pd
+#N canvas 0 0 600 400;
+
+// Define lookahead time in milliseconds
+[loadbang]
+|
+[50(  // 50ms lookahead
+|
+[t f f]
+|    |
+|    [samplerate~]
+|    |
+|    [* 0.001]  // Convert ms to samples
+|    |
+|    [plugin_latency]  // Report latency to DAW
+|
+[delwrite~ lookahead_buffer 100]
+
+// Audio input
+[adc~]
+|
+[t a a]
+|    |
+|    [env~]  // Get envelope
+|    |
+|    [> 0.8]  // Detect peaks
+|    |
+|    [gain_reduction]
+|    |
+|    [*~]  // Apply gain reduction
+|
+[delread~ lookahead_buffer 50]  // Read delayed audio
+|
+[dac~]
+```
+
+### Variable Latency with Oversampling
+
+```pd
+#N canvas 0 0 500 350;
+
+// Calculate latency based on oversampling factor
+[loadbang]
+|
+[t b b]
+|    |
+|    [samplerate~]
+|    |
+|    [/ 1000]  // Get samples per millisecond
+|
+[r oversample_factor]  // 1, 2, 4, 8x oversampling
+|
+[*]  // Multiply base latency by oversampling factor
+|
+[plugin_latency]
+
+// Example: 2x oversampling adds filter latency
+[2(  // Oversampling factor
+|
+[t f f]
+|    |
+|    [s oversample_factor]
+|
+[* 32]  // 32 samples of filter latency per oversampling stage
+|
+[plugin_latency]
+```
+
+## Important Notes
+
+<Note>
+  Latency values must be reported in **samples**, not milliseconds or seconds.
+</Note>
+
+<Warning>
+  - Changing latency during playback can cause audio glitches in most DAWs
+  - Set latency once during plugin initialization (use `[loadbang]`)
+  - If you must change latency dynamically, be aware that the DAW may need to rebuffer
+</Warning>
+
+## Calculating Latency
+
+### From Milliseconds
+
+```pd
+// Convert milliseconds to samples
+[50(  // 50ms latency
+|
+[t f f]
+|    |
+|    [samplerate~]
+|
+[* 0.001]  // ms to seconds
+|
+[*]  // multiply by sample rate
+|
+[plugin_latency]
+```
+
+### From Buffer Size
+
+```pd
+// Direct buffer size in samples
+[block~ 4096]  // Processing block size
+|
+[4096(  // Report same as latency
+|
+[plugin_latency]
+```
+
+### Combined Latencies
+
+```pd
+// Add multiple sources of latency
+[loadbang]
+|
+[t b b b]
+|    |    |
+|    |    [256(  // Oversampling filter: 256 samples
+|    |
+|    [512(  // Analysis buffer: 512 samples  
+|
+[1024(  // Processing buffer: 1024 samples
+|
+[+]  // Add all latencies
+|
+[+]
+|
+[plugin_latency]  // Total: 1792 samples
+```
+
+## Common Use Cases
+
+1. **Lookahead Processing**: Compressors, limiters, gates that need to "see" the future signal
+2. **Linear Phase Filters**: FIR filters that introduce latency for phase-linear response
+3. **FFT Processing**: Spectral effects that require buffering for frequency domain processing
+4. **Oversampling**: Upsampling filters that add latency
+5. **Analysis Windows**: Any processing requiring buffered analysis before output
+
+## See Also
+
+- `[block~]` - Set DSP block size
+- `[samplerate~]` - Get current sample rate
+- `[delread~]` / `[delwrite~]` - Delay line for lookahead

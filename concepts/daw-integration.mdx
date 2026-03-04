@@ -1,0 +1,806 @@
+---
+title: "DAW Integration"
+description: "How plugdata integrates with digital audio workstations for seamless music production"
+---
+
+## Overview
+
+plugindata provides deep integration with digital audio workstations (DAWs) through industry-standard plugin formats. This allows Pure Data patches to work seamlessly within modern music production workflows.
+
+## Plugin Formats
+
+plugindata is available in multiple plugin formats:
+
+- **VST3** - Steinberg's cross-platform format (Windows, macOS, Linux)
+- **AU** - Apple Audio Units (macOS only)  
+- **LV2** - Open-source format (Linux primarily)
+- **CLAP** - Modern open plugin standard (all platforms)
+
+Each format provides the same core functionality with platform-specific optimizations.
+
+## Transport Synchronization
+
+### Playhead Information
+
+From `PluginProcessor.cpp:1055-1128`, plugdata receives comprehensive transport data:
+
+```cpp
+void PluginProcessor::sendPlayhead()
+{
+    AudioPlayHead const* playhead = getPlayHead();
+    if (!playhead) return;
+    
+    auto infos = playhead->getPosition();
+    
+    lockAudioThread();
+    setThis();
+    
+    if (infos.hasValue()) {
+        // Transport state
+        atoms_playhead[0] = infos->getIsPlaying();
+        sendMessage("__playhead", "playing", atoms_playhead);
+        
+        atoms_playhead[0] = infos->getIsRecording();
+        sendMessage("__playhead", "recording", atoms_playhead);
+        
+        // Loop information
+        atoms_playhead[0] = infos->getIsLooping();
+        auto loopPoints = infos->getLoopPoints();
+        if (loopPoints.hasValue()) {
+            atoms_playhead.emplace_back(
+                static_cast<float>(loopPoints->ppqStart));
+            atoms_playhead.emplace_back(
+                static_cast<float>(loopPoints->ppqEnd));
+        }
+        sendMessage("__playhead", "looping", atoms_playhead);
+        
+        // Tempo
+        if (infos->getBpm().hasValue()) {
+            atoms_playhead.resize(1);
+            atoms_playhead[0] = static_cast<float>(*infos->getBpm());
+            sendMessage("__playhead", "bpm", atoms_playhead);
+        }
+        
+        // Time signature
+        if (infos->getTimeSignature().hasValue()) {
+            atoms_playhead.resize(1);
+            atoms_playhead[0] = static_cast<float>(
+                infos->getTimeSignature()->numerator);
+            atoms_playhead.emplace_back(static_cast<float>(
+                infos->getTimeSignature()->denominator));
+            sendMessage("__playhead", "timesig", atoms_playhead);
+        }
+        
+        // Position (PPQ, samples, seconds)
+        auto ppq = infos->getPpqPosition();
+        auto samplesTime = infos->getTimeInSamples();
+        auto secondsTime = infos->getTimeInSeconds();
+        
+        if (ppq.hasValue() || samplesTime.hasValue() || 
+            secondsTime.hasValue()) {
+            atoms_playhead.resize(3);
+            atoms_playhead[0] = ppq.hasValue() ? 
+                static_cast<float>(*ppq) : 0.0f;
+            atoms_playhead[1] = samplesTime.hasValue() ? 
+                static_cast<float>(*samplesTime) : 0.0f;
+            atoms_playhead[2] = secondsTime.hasValue() ? 
+                static_cast<float>(*secondsTime) : 0.0f;
+            sendMessage("__playhead", "position", atoms_playhead);
+        }
+    }
+    
+    unlockAudioThread();
+}
+```
+
+### Accessing Transport Data in Pd
+
+Use receive objects to access playhead information:
+
+```pd
+[r __playhead playing]   ← 0=stopped, 1=playing
+|
+[sel 1]
+|
+[metro 500]  ← Only run when playing
+```
+
+**Available Receivers**:
+
+| Receiver | Output | Description |
+|----------|--------|-------------|
+| `[r __playhead playing]` | 0 or 1 | Play/stop state |
+| `[r __playhead recording]` | 0 or 1 | Recording state |
+| `[r __playhead looping]` | 0/1 start end | Loop state and points (PPQ) |
+| `[r __playhead bpm]` | float | Current tempo |
+| `[r __playhead timesig]` | num denom | Time signature |
+| `[r __playhead position]` | ppq samples seconds | Transport position (list) |
+| `[r __playhead lastbar]` | float | PPQ of last bar start |
+| `[r __playhead framerate]` | float | Frame rate (for video sync) |
+| `[r __playhead edittime]` | float | Edit origin time |
+
+### Tempo Sync Example
+
+```pd
+[r __playhead bpm]
+|
+[/ 60]           ← Convert BPM to beats per second
+|
+[/ 4]            ← Quarter notes to 16th notes
+|
+[1000 /]         ← Convert to milliseconds
+|
+[metro]          ← Tempo-synced 16th note clock
+```
+
+### Position-Based Triggering
+
+```pd
+[r __playhead position]
+|
+[unpack f f f]
+|       |    |
+PPQ  Samples Seconds
+|
+[int]                  ← Get integer PPQ (beats)
+|
+[change]               ← Trigger on beat change
+|
+[bang]                 ← Beat trigger
+```
+
+## Automation
+
+### Parameter System
+
+From `PluginProcessor.cpp:120-131`, plugdata exposes automation parameters:
+
+```cpp
+// Built-in volume parameter
+auto* volumeParameter = new PlugDataParameter(this, "volume", 
+    0.8f,   // default value
+    true,   // is volume param
+    0,      // parameter index
+    0.0f,   // minimum
+    1.0f    // maximum
+);
+addParameter(volumeParameter);
+volume = volumeParameter->getValuePointer();
+
+// General purpose automation parameters
+for (int n = 0; n < numParameters; n++) {
+    auto* parameter = new PlugDataParameter(this, 
+        "param" + String(n + 1),
+        0.0f,    // default value
+        false,   // not volume param
+        n + 1,   // parameter index
+        0.0f,    // minimum
+        1.0f     // maximum
+    );
+    addParameter(parameter);
+}
+```
+
+**Default Configuration**:
+- 1 volume parameter (param0/volume)
+- 64 general automation parameters (param1-param64)
+- Range: 0.0 to 1.0 (normalized)
+- Saved with DAW project
+
+### Parameter Sending
+
+From `PluginProcessor.cpp:1149-1159`, parameters are efficiently updated:
+
+```cpp
+void PluginProcessor::sendParameters()
+{
+    ScopedLock lock(audioLock);
+    for (auto* param : enabledParameters) {
+        if (EXPECT_UNLIKELY(param->wasChanged())) {
+            auto title = param->getTitle();
+            sendFloat(title.data(), param->getUnscaledValue());
+            param->setUnchanged();
+        }
+    }
+}
+```
+
+Parameters are only sent when they change, minimizing overhead.
+
+### Using Automation in Pd
+
+**Receive Parameter Values**:
+```pd
+[r param1]
+|
+[* 440]     ← Scale 0-1 to 0-440 Hz
+|
+[osc~]
+```
+
+**Multiple Parameters**:
+```pd
+[r param1]  [r param2]  [r param3]
+|           |           |
+[* 1000]    [* 0.5]     [* 127]
+|           |           |
+Freq        Resonance   Velocity
+```
+
+**Bi-directional Control**:
+```pd
+[r param1]     [loadbang]
+|              |
+[hsl 128 15]   [0.5(
+|              |
+[s param1]     ← Send back to parameter
+```
+
+<Warning>
+Sending values back to parameters from Pd can conflict with DAW automation. Use carefully and consider disabling parameter sending when DAW automation is active.
+</Warning>
+
+### Parameter Mapping
+
+**Linear Scaling**:
+```pd
+[r param1]
+|
+[expr $f1 * (max - min) + min]  ← Scale to range
+```
+
+**Exponential Scaling** (for frequency):
+```pd
+[r param1]
+|
+[expr pow(2, $f1 * 10)]  ← Exponential curve
+|
+[* 20]                   ← Scale to Hz
+```
+
+**Stepped Values**:
+```pd
+[r param1]
+|
+[* 12]       ← 0-12 range
+|
+[int]        ← Round to integer
+|
+[sel 0 1 2 3 4 5 6 7 8 9 10 11 12]
+```
+
+## MIDI Routing
+
+### MIDI Input Processing
+
+From `PluginProcessor.cpp:1166-1201`, MIDI is processed and sent to Pd:
+
+```cpp
+void PluginProcessor::sendMidiBuffer(int const device, 
+                                    MidiBuffer const& buffer)
+{
+    if (acceptsMidi()) {
+        for (auto event : buffer) {
+            auto message = event.getMessage();
+            auto const channel = message.getChannel() + (device << 4);
+            
+            if (message.isNoteOn()) {
+                sendNoteOn(channel, message.getNoteNumber(), 
+                          message.getVelocity());
+            } else if (message.isNoteOff()) {
+                sendNoteOn(channel, message.getNoteNumber(), 0);
+            } else if (message.isController()) {
+                sendControlChange(channel, 
+                    message.getControllerNumber(), 
+                    message.getControllerValue());
+            } else if (message.isPitchWheel()) {
+                sendPitchBend(channel, 
+                    message.getPitchWheelValue() - 8192);
+            } else if (message.isChannelPressure()) {
+                sendAfterTouch(channel, 
+                    message.getChannelPressureValue());
+            } else if (message.isAftertouch()) {
+                sendPolyAfterTouch(channel, 
+                    message.getNoteNumber(), 
+                    message.getAfterTouchValue());
+            } else if (message.isProgramChange()) {
+                sendProgramChange(channel, 
+                    message.getProgramChangeNumber());
+            } else if (message.isSysEx()) {
+                for (int i = 0; i < message.getSysExDataSize(); ++i) {
+                    sendSysEx(device, message.getSysExData()[i]);
+                }
+            } else if (message.isMidiClock() || 
+                      message.isMidiStart() || 
+                      message.isMidiStop() || 
+                      message.isMidiContinue()) {
+                for (int i = 0; i < message.getRawDataSize(); ++i) {
+                    sendSysRealTime(device, message.getRawData()[i]);
+                }
+            }
+            
+            // Send raw MIDI bytes
+            for (int i = 0; i < message.getRawDataSize(); i++) {
+                sendMidiByte(device, message.getRawData()[i]);
+            }
+        }
+    }
+}
+```
+
+### MIDI in Pure Data
+
+**Note Messages**:
+```pd
+[notein]
+|  |   |
+note vel channel
+```
+
+**Control Change**:
+```pd
+[ctlin]
+|  |   |
+val cc# channel
+```
+
+**Pitch Bend**:
+```pd
+[bendin]
+|       |
+value   channel  ← Range: -8192 to 8191
+```
+
+**Complete MIDI Input**:
+```pd
+[notein]  [ctlin]  [bendin]  [pgmin]  [touchin]  [polytouchin]
+```
+
+### MIDI Output
+
+Send MIDI from Pd back to the DAW:
+
+```pd
+[60 100(
+|  |
+[noteout 1]  ← Send to DAW channel 1
+```
+
+**Complete MIDI Output**:
+```pd
+[noteout]  [ctlout]  [bendout]  [pgmout]  [touchout]  [polytouchout]
+```
+
+### Multi-Timbral Setup
+
+DAW MIDI can address 16 channels per device:
+
+```pd
+[notein]
+|  |  |
+|  |  [sel 1]  ← Filter for channel 1
+|  |  |
+[pack f f]
+|
+[makenote 127 500]  ← Synth voice for channel 1
+```
+
+## Sample Rate Handling
+
+### Sample Rate Adaptation
+
+From `PluginProcessor.cpp:699-759`, plugdata adapts to DAW sample rate:
+
+```cpp
+void PluginProcessor::prepareToPlay(double const sampleRate, 
+                                   int const samplesPerBlock)
+{
+    if (approximatelyEqual(sampleRate, 0.0))
+        return;
+    
+    float const oversampleFactor = 1 << oversampling;
+    auto maxChannels = std::max(getTotalNumInputChannels(), 
+                                getTotalNumOutputChannels());
+    
+    // Initialize Pd at (possibly oversampled) sample rate
+    prepareDSP(getTotalNumInputChannels(), 
+              getTotalNumOutputChannels(), 
+              sampleRate * oversampleFactor);
+    
+    // Setup oversampler
+    oversampler = std::make_unique<dsp::Oversampling<float>>(
+        std::max(1, maxChannels), 
+        oversampling, 
+        dsp::Oversampling<float>::filterHalfBandPolyphaseIIR, 
+        false
+    );
+    
+    oversampler->initProcessing(samplesPerBlock);
+    
+    statusbarSource->setSampleRate(sampleRate);
+    statusbarSource->setBufferSize(samplesPerBlock);
+}
+```
+
+**Supported Sample Rates**:
+- 44.1 kHz (CD quality)
+- 48 kHz (standard digital)
+- 88.2 kHz (2x oversample of 44.1)
+- 96 kHz (2x oversample of 48)
+- 176.4 kHz (4x oversample of 44.1)
+- 192 kHz (4x oversample of 48)
+- Any DAW-specified rate
+
+### Sample Rate in Pd
+
+Access current sample rate:
+
+```pd
+[samplerate~]
+|
+[print samplerate]  ← Outputs: 48000 (example)
+```
+
+Use for sample-rate-independent delays:
+
+```pd
+[samplerate~]
+|
+[/ 1000]        ← Samples per millisecond
+|
+[* 10]          ← 10ms delay
+|
+[vd~ delayline] ← Variable delay
+```
+
+## Buffer Size Handling
+
+### Block Size Adaptation
+
+Pure Data processes in fixed 64-sample blocks, but DAWs use variable buffer sizes.
+
+From `PluginProcessor.cpp:724-758`:
+
+```cpp
+auto const pdBlockSize = static_cast<size_t>(Instance::getBlockSize());
+audioBufferIn.setSize(maxChannels, pdBlockSize);
+audioBufferOut.setSize(maxChannels, pdBlockSize);
+
+// If the block size is a multiple of 64 and we are not a plugin, 
+// we can optimise the process loop
+variableBlockSize = !ProjectInfo::isStandalone || 
+                   samplesPerBlock < pdBlockSize || 
+                   samplesPerBlock % pdBlockSize != 0;
+
+if (variableBlockSize) {
+    // Use FIFO buffers for arbitrary block sizes
+    inputFifo = std::make_unique<AudioMidiFifo>(
+        maxChannels, 
+        std::max<int>(pdBlockSize, samplesPerBlock * oversampleFactor) * 3
+    );
+    outputFifo = std::make_unique<AudioMidiFifo>(
+        maxChannels, 
+        std::max<int>(pdBlockSize, samplesPerBlock * oversampleFactor) * 3
+    );
+    outputFifo->writeSilence(Instance::getBlockSize());
+}
+```
+
+### Processing Modes
+
+**Constant Block Size** (optimized):
+- DAW buffer is multiple of 64 samples
+- Direct processing without buffering
+- Lower latency
+- Used in standalone mode when possible
+
+**Variable Block Size** (adaptive):
+- DAW buffer is arbitrary size
+- FIFO buffering required
+- Slightly higher latency
+- Always used in plugin mode
+
+From `PluginProcessor.cpp:941-989`:
+
+```cpp
+void PluginProcessor::processConstant(dsp::AudioBlock<float> buffer)
+{
+    int const pdBlockSize = Instance::getBlockSize();
+    int const numBlocks = buffer.getNumSamples() / pdBlockSize;
+    
+    for (int block = 0; block < numBlocks; block++) {
+        // Process MIDI
+        midiDeviceManager.dequeueMidiInput(pdBlockSize, 
+            [this](int const port, MidiBuffer const& buffer) {
+                sendMidiBuffer(port, buffer);
+            });
+        
+        // Copy input
+        for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
+            FloatVectorOperations::copy(
+                audioVectorIn.data() + ch * pdBlockSize,
+                buffer.getChannelPointer(ch) + audioAdvancement,
+                pdBlockSize);
+        }
+        
+        setThis();
+        sendParameters();
+        sendMessagesFromQueue();
+        
+        // Process audio (64 samples)
+        performDSP(audioVectorIn.data(), audioVectorOut.data());
+        
+        // Copy output
+        for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
+            FloatVectorOperations::copy(
+                buffer.getChannelPointer(ch) + audioAdvancement,
+                audioVectorOut.data() + ch * pdBlockSize,
+                pdBlockSize);
+        }
+        
+        audioAdvancement += pdBlockSize;
+    }
+    
+    audioAdvancement = 0;
+}
+```
+
+### Latency Compensation
+
+From `PluginProcessor.cpp:192`:
+
+```cpp
+setLatencySamples(pd::Instance::getBlockSize());
+```
+
+plugindata reports 64 samples of algorithmic latency to the DAW, which automatically compensates by:
+- Delaying other tracks
+- Adjusting playback timing  
+- Maintaining phase alignment
+
+Additional latency from oversampling is also reported:
+
+```cpp
+setLatencySamples(pd::Instance::getBlockSize() + oversamplerLatency);
+```
+
+## Session Management
+
+### State Saving
+
+From `PluginProcessor.cpp:1224-1308`, complete state is saved:
+
+```cpp
+void PluginProcessor::getStateInformation(MemoryBlock& destData)
+{
+    setThis();
+    MemoryOutputStream ostream(destData, false);
+    
+    ostream.writeInt(patches.size());
+    
+    lockAudioThread();
+    for (auto const& patch : patches) {
+        auto content = patch->getCanvasContent();  // Full patch
+        auto patchFile = patch->getCurrentFile().getFullPathName();
+        
+        // Replace absolute paths with variables
+        if (patchFile.startsWith(patchesDir.getFullPathName())) {
+            patchFile = patchFile.replace(
+                patchesDir.getFullPathName(), 
+                "${PATCHES_DIR}"
+            );
+        }
+        
+        // Write legacy format
+        ostream.writeString(content);
+        ostream.writeString(patchFile);
+    }
+    unlockAudioThread();
+    
+    // Save settings
+    ostream.writeInt(getLatencySamples() - Instance::getBlockSize());
+    ostream.writeInt(oversampling);
+    ostream.writeFloat(getValue<float>(tailLength));
+    
+    // XML format for extensibility
+    auto xml = XmlElement("plugdata_save");
+    xml.setAttribute("Version", PLUGDATA_VERSION);
+    xml.setAttribute("Oversampling", oversampling);
+    xml.setAttribute("Latency", getLatencySamples());
+    xml.setAttribute("TailLength", getValue<float>(tailLength));
+    xml.setAttribute("Width", editor->getWidth());
+    xml.setAttribute("Height", editor->getHeight());
+    
+    // Save parameter values
+    PlugDataParameter::saveStateInformation(xml, getParameters());
+    
+    // Write XML to stream
+    MemoryBlock xmlBlock;
+    copyXmlToBinary(xml, xmlBlock);
+    ostream.writeInt(static_cast<int>(xmlBlock.getSize()));
+    ostream.write(xmlBlock.getData(), xmlBlock.getSize());
+}
+```
+
+**Saved Data**:
+- Complete patch content (embedded)
+- Parameter values
+- Oversampling settings
+- Editor size and position
+- Connection paths (segmented)
+- Custom state data
+- Plugin version
+
+### State Loading
+
+State is restored when DAW project opens:
+
+```cpp
+void PluginProcessor::setStateInformation(void const* data, 
+                                         int const sizeInBytes)
+{
+    MemoryInputStream istream(data, sizeInBytes, false);
+    
+    int const numPatches = istream.readInt();
+    
+    SmallArray<std::pair<String, File>> newPatches;
+    for (int i = 0; i < numPatches; i++) {
+        auto state = istream.readString();  // Patch content
+        auto path = istream.readString();   // File path
+        
+        // Expand path variables
+        path = path.replace("${PATCHES_DIR}", 
+                          patchesDir.getFullPathName());
+        
+        newPatches.emplace_back(state, File(path));
+    }
+    
+    // Recreate patches
+    for (auto& [content, file] : newPatches) {
+        auto* newPatch = loadPatchFromString(content, file);
+    }
+}
+```
+
+## Performance Optimization
+
+### CPU Load Management
+
+From `PluginProcessor.cpp:744`:
+
+```cpp
+cpuLoadMeasurer.reset(sampleRate, samplesPerBlock);
+```
+
+CPU usage is measured and displayed in the status bar.
+
+### Audio Thread Safety
+
+From `PluginProcessor.cpp:825-938`, processing is thread-safe:
+
+```cpp
+void PluginProcessor::processBlock(AudioBuffer<float>& buffer, 
+                                  MidiBuffer& midiBuffer)
+{
+    ScopedNoDenormals noDenormals;  // Prevent denormal slowdown
+    AudioProcessLoadMeasurer::ScopedTimer cpuTimer(
+        cpuLoadMeasurer, buffer.getNumSamples());
+    
+    setThis();  // Set Pd instance context
+    
+    sendPlayhead();  // Update transport info
+    
+    // Process with oversampling if enabled
+    auto targetBlock = dsp::AudioBlock<float>(buffer);
+    auto const blockOut = oversampling > 0 ? 
+        oversampler->processSamplesUp(targetBlock) : targetBlock;
+    
+    if (variableBlockSize) {
+        processVariable(blockOut, midiBuffer);
+    } else {
+        midiBuffer.clear();
+        processConstant(blockOut);
+    }
+    
+    if (oversampling > 0) {
+        oversampler->processSamplesDown(targetBlock);
+    }
+    
+    // Apply volume with smoothing
+    smoothedGain.setTargetValue(mappedTargetGain);
+    smoothedGain.applyGain(buffer, buffer.getNumSamples());
+    
+    // Send MIDI output
+    midiDeviceManager.sendAndCollectMidiOutput(midiBuffer);
+    
+    // Optional limiter for safety
+    if (enableLimiter && buffer.getNumChannels() > 0) {
+        auto block = dsp::AudioBlock<float>(buffer);
+        limiter.process(block);
+    }
+}
+```
+
+## Best Practices
+
+### Optimizing for DAW Use
+
+**Minimize CPU Usage**:
+- Use efficient algorithms
+- Disable unused signal paths
+- Consider oversampling cost
+- Monitor CPU meter
+
+**Handle Automation Smoothly**:
+```pd
+[r param1]
+|
+[line~]  ← Smooth parameter changes
+```
+
+**Tempo Sync Correctly**:
+```pd
+[r __playhead bpm]
+|
+[change]  ← Only update on tempo change
+```
+
+**MIDI Latency**:
+- MIDI is processed per-block (64 samples)
+- For tighter timing, reduce DAW buffer size
+- Consider MIDI->audio jitter in timing-critical applications
+
+### Testing in DAW
+
+1. **Test automation** recording and playback
+2. **Verify tempo sync** at different BPMs
+3. **Check MIDI** routing and channel handling
+4. **Test state recall** (save/load project)
+5. **Monitor CPU usage** under load
+6. **Test multiple instances** for efficiency
+7. **Verify latency compensation** with other tracks
+
+## Troubleshooting
+
+### Common Issues
+
+**No Sound**
+- Check DAW routing to plugin
+- Verify `[dac~]` connections in patch
+- Check output channel configuration
+- Ensure DSP is enabled (should be automatic)
+
+**Automation Not Working**  
+- Verify parameter receivers: `[r param1]`
+- Check DAW automation is enabled
+- Test with simple patch first
+- Look for parameter conflicts
+
+**Transport Not Syncing**
+- Check receivers: `[r __playhead ...]`
+- Test with simple tempo display
+- Verify DAW is sending transport
+- Check if transport is playing
+
+**High CPU Usage**
+- Disable oversampling if not needed
+- Optimize Pd patch efficiency
+- Check for unnecessary computations
+- Use `[block~]` for lower rates where possible
+
+**MIDI Not Received**
+- Verify MIDI track routes to plugin
+- Check MIDI channel filtering
+- Test with `[notein]` + `[print]`
+- Ensure DAW MIDI output is enabled
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Plugin vs Standalone" icon="toggle-on" href="/concepts/plugin-vs-standalone">
+    Understand the differences between operating modes
+  </Card>
+  <Card title="Patching Basics" icon="pencil" href="/concepts/patching-basics">
+    Master Pure Data patching fundamentals
+  </Card>
+</CardGroup>

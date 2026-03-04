@@ -1,80 +1,555 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quickstart Guide"
+description: "Create your first patch in plugdata and learn the fundamentals of visual audio programming"
 ---
 
-## Get started in three steps
+## Your First Patch
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This tutorial will guide you through creating your first working patch in plugdata. You'll build a simple sine wave oscillator with volume control, introducing core concepts of visual patching along the way.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+This guide assumes you have plugdata installed. If not, start with the [Installation Guide](/installation).
 </Note>
+
+## Launching plugdata
+
+<Steps>
+
+<Step title="Open plugdata">
+
+**Standalone mode:**
+- Launch plugdata from your Applications folder, Start Menu, or desktop shortcut
+- You'll see the main interface with a blank canvas and sidebar
+
+**Plugin mode:**
+- Open your DAW
+- Create a new instrument or audio track
+- Load "plugdata" (instrument) or "plugdata-fx" (effect) from your plugin list
+- The plugdata editor window will open
+
+</Step>
+
+<Step title="Understanding the interface">
+
+The plugdata interface consists of several key areas:
+
+**Main Canvas** (center): Where you create your patch by placing and connecting objects
+
+**Sidebar** (left or right): Contains panels for:
+- Object browser/palette
+- Inspector (object properties)
+- Console (messages and errors)
+- Documentation browser
+- Search panel
+
+**Toolbar** (top): File operations, edit mode toggle, zoom controls, DSP on/off
+
+**Status Bar** (bottom): Shows CPU usage, audio status, and current mode
+
+<Tip>
+Toggle the sidebar visibility with the button in the toolbar, or resize it by dragging its edge.
+</Tip>
+
+</Step>
+
+</Steps>
+
+## Creating Objects
+
+<Steps>
+
+<Step title="Enter Edit Mode">
+
+Before you can create objects, ensure you're in Edit Mode:
+
+- Look for the **Lock/Edit toggle** in the toolbar (padlock icon)
+- Click it so the padlock is **unlocked** (Edit Mode)
+- The canvas background may change slightly to indicate edit mode
+
+<Note>
+**Edit Mode**: Create, delete, and move objects and connections  
+**Run Mode** (locked): Interact with GUI objects like sliders and buttons
+</Note>
+
+</Step>
+
+<Step title="Create an oscillator object">
+
+In Pure Data and plugdata, objects are created by typing their names:
+
+1. **Double-click** on the blank canvas, or press `N` key
+2. A text entry box appears
+3. Type: `osc~ 440`
+4. Press **Enter** or click outside the box
+
+You've created an oscillator object that generates a 440 Hz sine wave (A4 note)!
+
+**Understanding object syntax:**
+- `osc~`: Object name (the `~` indicates it processes audio signals)
+- `440`: Creation argument (the frequency in Hz)
+
+</Step>
+
+<Step title="Create the audio output">
+
+Now create the object that sends audio to your speakers/headphones:
+
+1. Double-click below the `osc~` object
+2. Type: `dac~`
+3. Press Enter
+
+The `dac~` object is the "Digital to Analog Converter" - it outputs audio to your audio interface.
+
+<Tip>
+`dac~` stands for "digital-to-analog converter" while `adc~` is "analog-to-digital converter" for audio input.
+</Tip>
+
+</Step>
+
+<Step title="Connect the objects">
+
+Now connect the oscillator to the output:
+
+1. Hover over the small rectangle at the **bottom** of the `osc~` object (the outlet)
+2. Click and **drag** to the rectangle at the **top** of the `dac~` object (the inlet)
+3. Release to create a connection (patch cord)
+
+You should see a line connecting the two objects. This connection carries the audio signal from the oscillator to the output.
+
+**Connection rules:**
+- **Outlets** (bottom of objects) send data
+- **Inlets** (top of objects) receive data
+- Connections flow **downward** from outlet to inlet
+- **Thick connections** carry audio signals (ending in `~`)
+- **Thin connections** carry control messages (numbers, symbols, etc.)
+
+</Step>
+
+</Steps>
+
+## Starting Audio
+
+<Steps>
+
+<Step title="Turn on DSP">
+
+DSP (Digital Signal Processing) must be enabled to hear audio:
+
+1. Find the **DSP toggle** in the toolbar (speaker icon or "DSP" button)
+2. Click it to turn **On** (the button should be highlighted)
+3. Alternatively, use the keyboard shortcut (typically `Cmd/Ctrl + .`)
+
+<Warning>
+Make sure your volume is at a reasonable level before turning on DSP! The default `osc~ 440` will play at full volume.
+</Warning>
+
+</Step>
+
+<Step title="Hear your first sound">
+
+With DSP enabled, you should now hear a continuous 440 Hz sine wave tone!
+
+If you don't hear anything:
+- Check your system audio output is not muted
+- Verify DSP is enabled (button highlighted in toolbar)
+- Ensure connections are correct (thick line from `osc~` to `dac~`)
+- In standalone mode, check **Audio Settings** (menu bar) to verify correct output device
+
+</Step>
+
+<Step title="Stop the sound">
+
+To silence the tone:
+- Turn **DSP off** using the toolbar button, or
+- Delete the connection between objects (select it and press Delete/Backspace), or  
+- Close the patch
+
+</Step>
+
+</Steps>
+
+## Adding Volume Control
+
+A continuous loud tone isn't very useful. Let's add volume control:
+
+<Steps>
+
+<Step title="Create a multiplier">
+
+Insert a volume control between the oscillator and output:
+
+1. Create a new object between `osc~` and `dac~`
+2. Type: `*~ 0.5`
+3. Press Enter
+
+The `*~` object multiplies the audio signal. The argument `0.5` reduces the volume to 50%.
+
+</Step>
+
+<Step title="Reconnect the patch">
+
+Update your connections:
+
+1. **Delete** the direct connection from `osc~` to `dac~` (click it and press Delete)
+2. Connect `osc~` outlet → `*~` inlet
+3. Connect `*~` outlet → `dac~` inlet
+
+Your signal flow is now: `osc~` → `*~` → `dac~`
+
+</Step>
+
+<Step title="Add a slider for interactive control">
+
+Let's add a GUI slider to control volume in real-time:
+
+1. Create a new object **above** the `*~` object
+2. Type: `hsl` (horizontal slider)
+3. Press Enter
+
+A horizontal slider appears! This is a GUI object that outputs numbers as you move it.
+
+</Step>
+
+<Step title="Configure the slider range">
+
+The slider needs to output values between 0.0 (silent) and 1.0 (full volume):
+
+1. **Right-click** the slider
+2. Select **Properties** from the menu
+3. Set the following values:
+   - **Minimum**: 0
+   - **Maximum**: 1  
+   - **Width**: 128 (or your preference)
+   - **Height**: 15 (or your preference)
+4. Click **OK** or close the properties panel
+
+<Tip>
+You can also access properties through the Inspector panel in the sidebar when an object is selected.
+</Tip>
+
+</Step>
+
+<Step title="Connect the slider">
+
+Connect the slider to control the multiplier:
+
+1. Connect the slider's **outlet** to the **right inlet** of `*~`
+
+The right inlet of `*~` controls the multiplication factor (volume).
+
+</Step>
+
+<Step title="Test the volume control">
+
+1. Switch to **Run Mode** (click the padlock to lock it)
+2. Turn on **DSP**
+3. Move the slider left and right
+
+You should hear the volume change as you move the slider!
+
+**Run Mode vs Edit Mode:**
+- In **Run Mode** (locked), GUI objects are interactive
+- In **Edit Mode** (unlocked), you can move and edit objects
+- Toggle between them frequently as you build and test patches
+
+</Step>
+
+</Steps>
+
+## Adding a Frequency Control
+
+Let's add another slider to change the pitch:
+
+<Steps>
+
+<Step title="Switch back to Edit Mode">
+
+Click the padlock to unlock (Edit Mode).
+
+</Step>
+
+<Step title="Create a frequency slider">
+
+1. Create another horizontal slider above the `osc~` object
+2. Right-click it and open **Properties**
+3. Configure:
+   - **Minimum**: 100 (Hz)
+   - **Maximum**: 1000 (Hz)
+   - **Initial value**: 440
+4. Click OK
+
+</Step>
+
+<Step title="Connect frequency control">
+
+Connect the frequency slider's **outlet** to the **left inlet** of the `osc~` object.
+
+The left inlet of `osc~` controls the frequency.
+
+</Step>
+
+<Step title="Test pitch and volume control">
+
+1. Switch to **Run Mode**
+2. Turn on **DSP** if it's off
+3. Move the **top slider** to change pitch (100-1000 Hz)
+4. Move the **middle slider** to change volume (0-100%)
+
+Congratulations! You've built an interactive synthesizer with pitch and volume control.
+
+</Step>
+
+</Steps>
+
+## Adding Labels and Comments
+
+<Steps>
+
+<Step title="Add text labels">
+
+Make your patch more readable with comments:
+
+1. Switch to **Edit Mode**
+2. Create a new object
+3. Type: `comment Frequency Control`
+4. Press Enter
+
+The comment object displays text but doesn't process any data. Position it near your frequency slider.
+
+</Step>
+
+<Step title="Add more labels">
+
+Create additional comments to label:
+- "Volume Control" near the volume slider  
+- "Sine Wave Oscillator" near the `osc~` object
+- "Audio Output" near the `dac~` object
+
+Well-labeled patches are easier to understand and modify later!
+
+</Step>
+
+</Steps>
+
+## Saving Your Patch
+
+<Steps>
+
+<Step title="Save the patch file">
+
+1. Go to **File → Save** (or `Cmd/Ctrl + S`)
+2. Choose a location and filename (e.g., "my-first-synth.pd")
+3. Click **Save**
+
+Patches are saved as `.pd` files (Pure Data patch format).
+
+</Step>
+
+<Step title="Understanding .pd vs .plugdata files">
+
+- **`.pd` files**: Standard Pure Data patch format, compatible with vanilla Pd
+- **`.plugdata` files**: Compressed package format that can include subpatches, abstractions, and dependencies in a single file
+
+For most purposes, use `.pd` files for maximum compatibility.
+
+</Step>
+
+</Steps>
+
+## Understanding Message Flow
+
+Here's what happens when you move a slider:
+
+<CodeGroup>
+
+```text Signal Flow
+Frequency Slider (440) 
+  ↓
+osc~ 440 (generates sine wave at 440 Hz)
+  ↓ (audio signal)
+*~ 0.5 (multiplies signal by 0.5 = 50% volume)
+  ↓ (audio signal)
+dac~ (sends to audio output)
+  ↓
+Your speakers/headphones
+```
+
+```text Control Flow
+1. You move the slider in Run Mode
+2. Slider outputs a number (e.g., 440)
+3. Number flows through the connection
+4. osc~ receives the number and changes frequency
+5. Audio signal is generated at new frequency
+6. Signal flows through *~ and dac~ to output
+```
+
+</CodeGroup>
+
+**Key concepts:**
+- **Hot inlets** (leftmost): Trigger computation and output
+- **Cold inlets** (others): Store values but don't trigger output
+- **Audio signals** (`~` objects): Process at audio rate (e.g., 44,100 samples/second)
+- **Control messages**: Process on-demand when triggered
+
+## Expanding Your Patch
+
+Try these enhancements to learn more:
+
+<Accordion title="Add a different waveform">
+Replace `osc~` with:
+- `phasor~` - sawtooth wave (brighter sound)
+- `square~` - square wave (hollow sound)  
+- `noise~` - white noise
+
+Each has a distinct timbre!
+</Accordion>
+
+<Accordion title="Make it stereo">
+Connect your audio to both channels of `dac~`:
+- Connect your signal to both the **left** and **right** inlets of `dac~`
+- Or use `dac~ 1 2` and connect to separate inlets
+</Accordion>
+
+<Accordion title="Add a number box for precise control">
+1. Create object: `number` or `floatatom`
+2. Connect it parallel to a slider
+3. It displays the exact value and allows precise typing
+</Accordion>
+
+<Accordion title="Add an envelope (fade in/out)">
+1. Create: `vsl` (vertical slider) for envelope
+2. Create: `line~` to smooth value changes
+3. Connect: vsl → line~ → right inlet of another `*~`
+4. This creates smooth fades instead of sudden volume changes
+</Accordion>
+
+## Exploring Objects
+
+<Steps>
+
+<Step title="Open the object browser">
+
+Discover more objects using the built-in browser:
+
+1. Open the **sidebar** (if hidden)
+2. Click the **Palette** or **Browser** tab
+3. Browse categories:
+   - Audio (oscillators, filters, effects)
+   - Control (math, logic, sequencing)
+   - GUI (sliders, buttons, toggles)
+   - ELSE (extensive collection from the ELSE library)
+   - Cyclone (Max/MSP compatible objects)
+
+</Step>
+
+<Step title="View object documentation">
+
+To learn what any object does:
+
+1. **Right-click** an object
+2. Select **Help** from the menu
+3. A help patch opens showing:
+   - What the object does
+   - Inlet/outlet descriptions  
+   - Usage examples
+   - Related objects
+
+Alternatively, use the **Documentation Browser** panel in the sidebar.
+
+</Step>
+
+<Step title="Search for objects">
+
+Use the search panel:
+
+1. Open the **Search** panel in the sidebar
+2. Type keywords (e.g., "filter", "delay", "random")
+3. Results show matching objects with descriptions
+4. Click an object to create it on the canvas
+
+</Step>
+
+</Steps>
+
+## Essential Objects to Learn
+
+Here are fundamental objects to explore next:
+
+### Oscillators and Generators
+- `osc~` - sine wave oscillator
+- `phasor~` - sawtooth/ramp oscillator
+- `noise~` - white noise generator
+- `saw~` - sawtooth oscillator (ELSE)
+- `square~` - square wave oscillator (ELSE)
+
+### Math and Control
+- `+`, `-`, `*`, `/` - basic math operations
+- `+~`, `-~`, `*~`, `/~` - audio-rate math  
+- `random` - random integer generator
+- `metro` - metronome (triggers at regular intervals)
+- `line~` - smooth value changes
+
+### Filters and Effects
+- `lop~` - lowpass filter
+- `hip~` - highpass filter
+- `vcf~` - voltage-controlled filter
+- `delwrite~` / `delread~` - delay effects
+- `rev~` - reverb (ELSE)
+
+### GUI Objects
+- `hsl` / `vsl` - horizontal/vertical slider
+- `tgl` - toggle button  
+- `bng` - bang button (triggers)
+- `number` - number box
+- `vradio` / `hradio` - radio buttons
+
+### Audio I/O
+- `dac~` - audio output
+- `adc~` - audio input
+- `soundfiler` - load/save audio files
+- `readsf~` - play audio files
+
+## Next Steps
+
+Now that you've created your first patch, continue learning:
+
+1. **Explore example patches**: Look for example patches in plugdata's installation folder or community resources
+2. **Read the object reference**: Browse the documentation browser to learn new objects
+3. **Watch tutorials**: The plugdata Discord has shared patches and tutorials
+4. **Build something**: Try creating:
+   - A simple drum machine using `metro` and `bng`
+   - A low-frequency oscillator (LFO) to modulate pitch or volume
+   - A filter sweep using `vcf~` and a slider
+   - A delay effect with feedback
+
+<Tip>
+The best way to learn is by experimenting! Don't be afraid to try things - you can always undo (`Cmd/Ctrl + Z`) or start fresh.
+</Tip>
+
+## Common Shortcuts
+
+Speed up your workflow with these keyboard shortcuts:
+
+| Shortcut | Action |
+|----------|--------|
+| `N` or `1` | Create new object |
+| `Cmd/Ctrl + E` | Toggle Edit/Run mode |
+| `Cmd/Ctrl + .` | Toggle DSP on/off |
+| `Cmd/Ctrl + D` | Duplicate selection |
+| `Cmd/Ctrl + A` | Select all |
+| `Delete` / `Backspace` | Delete selection |
+| `Cmd/Ctrl + Z` | Undo |
+| `Cmd/Ctrl + Shift + Z` | Redo |
+| `Cmd/Ctrl + +/-` | Zoom in/out |
+| `Right-click` | Object menu (properties, help, etc.) |
+
+## Getting Help
+
+If you get stuck:
+
+- **Discord**: Join the plugdata community at https://discord.gg/eT2RxdF9Nq
+- **Help patches**: Right-click any object → Help
+- **Pure Data documentation**: Much Pure Data documentation applies to plugdata
+- **GitHub Issues**: Report bugs or request features
+
+Happy patching!

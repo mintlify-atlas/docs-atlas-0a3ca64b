@@ -1,0 +1,114 @@
+---
+title: "[param]"
+description: "Interact with DAW automation parameters"
+---
+
+## Overview
+
+The `[param]` object sends and receives automation parameters to and from the DAW. It enables bidirectional communication with your DAW's automation system, allowing patches to both control and respond to automation parameters.
+
+Before using `[param]`, you must create an automation parameter in the sidebar.
+
+## Arguments
+
+<ParamField path="name" type="symbol" required>
+  The parameter name. This should match the name of the automation parameter created in the sidebar.
+</ParamField>
+
+<ParamField path="auto_handle" type="float" default="0">
+  When set to `1`, automatically handles change state when interacting with GUI objects. This is useful for integrating with sliders, number boxes, and other UI elements.
+  - `0` = Manual change state handling
+  - `1` = Automatic change state handling
+</ParamField>
+
+## Inlets
+
+<ResponseField name="inlet_1" type="float">
+  Set DAW parameter value. Send a float to update the automation parameter value in the DAW.
+</ResponseField>
+
+<ResponseField name="inlet_2" type="float">
+  Inform DAW about change state:
+  - `0` = Reading (parameter is being read/displayed)
+  - `1` = Writing (parameter is being actively changed)
+  
+  This is used to communicate gesture states to the DAW for automation recording.
+</ResponseField>
+
+## Outlets
+
+<ResponseField name="outlet_1" type="float">
+  Received DAW parameter value. Outputs the current value when the automation parameter changes in the DAW.
+</ResponseField>
+
+## Methods
+
+<ParamField path="create" type="message">
+  Activate the automation parameter. This must be called after creating the parameter in the sidebar.
+  
+  ```pd
+  [create(
+  |
+  [param my_param]
+  ```
+</ParamField>
+
+<ParamField path="range" type="message">
+  Set parameter range with two float values (minimum and maximum).
+  
+  ```pd
+  [range 0 127(
+  |
+  [param my_param]
+  ```
+</ParamField>
+
+<ParamField path="mode" type="message">
+  Set parameter mode using a float value:
+  - `1` = Float (linear)
+  - `2` = Integer (stepped)
+  - `3` = Logarithmic
+  - `4` = Exponential
+  
+  ```pd
+  [mode 3(
+  |
+  [param my_param]
+  ```
+</ParamField>
+
+## Usage Example
+
+```pd
+#N canvas 0 0 450 300;
+
+// Create a parameter with automatic GUI handling
+[loadbang]
+|
+[create(
+|
+[param cutoff_freq 1]
+|
+[hsl 128 15 20 20000 1 0 empty empty cutoff 8 8 0 10]
+
+// Manual parameter control with change state
+[bang(
+|
+[1, 500 5000(  // ramp from 500 to 5000
+|
+[line]
+|
+[param filter_res 0]
+
+// Send change state manually
+[1(  [0(
+|     |
+[param filter_res 0, inlet 2]
+```
+
+## Notes
+
+- Always create the parameter in the sidebar before sending the `create` message
+- The parameter name must match exactly between the object and the sidebar
+- Use the second inlet for proper automation recording when changing values programmatically
+- Auto-handle mode (`1`) simplifies GUI integration but may not be suitable for all use cases

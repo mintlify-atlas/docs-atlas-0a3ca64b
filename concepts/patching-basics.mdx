@@ -1,0 +1,265 @@
+---
+title: "Patching Basics"
+description: "Learn the fundamentals of visual programming in plugdata using Pure Data's patching paradigm"
+---
+
+## Visual Programming with Pure Data
+
+plugindata uses Pure Data's visual programming paradigm, where programs are created by connecting graphical objects together on a canvas rather than writing text-based code. This approach is particularly powerful for audio and multimedia applications.
+
+### The Canvas
+
+The canvas is your workspace where you create patches. In plugdata, the canvas is implemented as an infinite surface with configurable grid snapping:
+
+- **Infinite Canvas**: The canvas size is effectively unlimited (32,768 x 32,768 pixels internally)
+- **Origin Point**: Located at the center, marked with dashed lines when visible
+- **Patch Boundaries**: Configurable width and height that define your working area
+- **Grid System**: Optional grid overlay for precise object placement
+
+<Tip>
+Use **Cmd/Ctrl + 0** to jump to the canvas origin point when you get lost in a large patch.
+</Tip>
+
+### Objects: The Building Blocks
+
+Every element in a Pure Data patch is an object. Objects process, generate, or display data.
+
+#### Object Types
+
+**Message Objects** (Control Rate)
+- Process discrete events and values
+- Operate at control rate (when events occur)
+- Examples: `[metro]`, `[random]`, `[print]`
+
+**Signal Objects** (Audio Rate) 
+- Process continuous audio signals
+- Operate at audio sample rate (typically 44.1kHz or 48kHz)
+- Always end with a tilde (`~`) in their name
+- Examples: `[osc~]`, `[dac~]`, `[+~]`
+
+**GUI Objects**
+- Provide visual interfaces for interaction
+- Examples: sliders, number boxes, toggles, canvases
+
+```pd
+[metro 500]  ← Message object (control rate)
+|
+[random 100]
+|
+[osc~ 440]   ← Signal object (audio rate)
+|
+[dac~]       ← Digital-to-analog converter (audio output)
+```
+
+### Inlets and Outlets
+
+Objects communicate through **inlets** (inputs) and **outlets** (outputs).
+
+#### Hot vs Cold Inlets
+
+This is a fundamental concept in Pure Data:
+
+**Hot Inlet** (leftmost inlet):
+- Triggers the object to perform its operation
+- Causes output to be sent from outlets
+- Always processes immediately
+
+**Cold Inlets** (all other inlets):
+- Store values without triggering execution
+- Wait for the hot inlet to receive input
+- Update internal state only
+
+```pd
+[50]  [10]   ← Send values
+ |      |
+ [+    ]     ← Addition object
+ |
+[print]      ← Output: 60
+```
+
+In the example above:
+1. Sending 10 to the right (cold) inlet stores the value
+2. Sending 50 to the left (hot) inlet triggers the addition and outputs 60
+
+<Warning>
+The order of connections matters! Cold inlets must receive their values before the hot inlet is triggered for the calculation to be correct.
+</Warning>
+
+### Execution Order
+
+Pure Data executes from **right to left** and **top to bottom**:
+
+1. When an object fires, its outlets send messages
+2. Rightmost connections are executed first
+3. Objects higher on the canvas execute before lower objects
+4. This creates a depth-first execution tree
+
+```pd
+[bang]
+    |
+    |----[print third]   ← Executes third
+    |
+    |----[print second]  ← Executes second
+    |
+    |----[print first]   ← Executes first (rightmost)
+```
+
+<Tip>
+To control execution order precisely, use `[trigger]` (or `[t]`) objects to guarantee the sequence of operations.
+</Tip>
+
+### Signal vs Message Objects (~)
+
+The tilde (`~`) suffix is crucial:
+
+**Message Objects**
+- Discrete values and events
+- Processed only when triggered
+- Lower CPU usage
+- Examples: `[+]`, `[*]`, `[random]`
+
+**Signal Objects**  
+- Continuous audio-rate streams
+- Processed every sample (e.g., 44,100 times per second)
+- Higher CPU usage
+- Examples: `[+~]`, `[*~]`, `[osc~]`
+
+**Mixing Signals and Messages**
+
+You can convert between them:
+- `[sig~]` - Convert message to signal
+- `[snapshot~]` - Sample a signal to get a message value
+- `[vsnapshot~]` - Vector-based signal sampling
+
+### Subpatches
+
+Subpatches let you organize complex patches into reusable modules.
+
+#### Creating Subpatches
+
+**pd Subpatch**: Embedded subpatch
+```pd
+[pd mysub]  ← Double-click to open
+```
+
+**Abstraction**: External file that can be reused
+- Saved as separate `.pd` files
+- Can be used across multiple patches
+- Searchable in plugdata's object library
+
+Implementation detail from `Canvas.cpp:628-667`:
+```cpp
+if (auto const subpatch = gui->getPatch()) {
+    cnv->pd->lockAudioThread();
+    auto* subpatchPtr = subpatch->getPointer().get();
+    // Process child objects for inlet/outlet detection
+    for (auto obj : subpatch->getObjects()) {
+        auto const name = String::fromUTF8((*obj.getRaw<t_pd>())->c_name->s_name);
+        if (name == "inlet" || name == "inlet~") {
+            // Handle inlet tooltip extraction
+        }
+    }
+}
+```
+
+#### Inlet and Outlet Objects
+
+Inside subpatches, use special objects to define the interface:
+
+- `[inlet]` / `[inlet~]` - Receive messages/signals from parent
+- `[outlet]` / `[outlet~]` - Send messages/signals to parent
+
+The order of these objects (left to right position) determines their inlet/outlet index.
+
+### Abstractions
+
+Abstractions are reusable subpatches saved as separate files:
+
+1. Create a patch with `[inlet]` and `[outlet]` objects
+2. Save it with a unique name (e.g., `myfilter.pd`)
+3. Use it in other patches by creating an object with that name
+
+**Advantages**:
+- Code reuse across projects
+- Centralized updates (edit once, affects all instances)
+- Cleaner main patches
+- Can be shared with the community
+
+**Arguments**:
+Abstractions can accept creation arguments:
+```pd
+[myfilter 440 0.5]  ← Pass arguments to abstraction
+```
+
+Access arguments inside the abstraction using:
+- `[$1]`, `[$2]`, etc. - Creation arguments
+- `[\$0]` - Unique instance ID (for local send/receive)
+
+<Note>
+Abstractions must be in Pd's search path or in the same directory as your patch. plugdata automatically manages search paths for installed libraries.
+</Note>
+
+## Lock Mode vs Edit Mode
+
+From `Canvas.cpp:922-926`:
+
+plugindata has two distinct modes:
+
+**Edit Mode** (Unlocked)
+- Create and modify objects
+- Make and remove connections  
+- Move and resize objects
+- Objects are not interactive
+
+**Lock Mode** (Performance/Run Mode)
+- Interact with GUI objects (sliders, toggles, etc.)
+- Objects and connections cannot be modified
+- Optimized for performance
+- No visual overhead from editing features
+
+<Tip>
+Quickly toggle between modes with **Cmd/Ctrl + E** or by clicking the lock icon in the toolbar.
+</Tip>
+
+## Connection Types
+
+Connections in plugdata are visually distinct:
+
+- **Black/Base**: Standard message connections
+- **Colored** (when configured): Signal connections (~)
+- **Special** (Gem): GEM rendering chain connections
+
+The connection system supports:
+- **Segmented paths**: Orthogonal routing with user-defined waypoints
+- **Curved paths**: Smooth bezier curves (default)
+- **Straight paths**: Direct lines between objects
+
+From `Connection.cpp:879-933`, the path calculation uses control points for smooth curves:
+```cpp
+float const width = std::max(start.x, end.x) - std::min(start.x, end.x);
+float const height = std::max(start.y, end.y) - std::min(start.y, end.y);
+float shiftY = std::min<float>(maxShiftY, max * 0.5);
+// Cubic bezier for smooth connections
+connectionPath.cubicTo(ctrlPoint1, ctrlPoint2, end);
+```
+
+## Best Practices
+
+1. **Use meaningful object names**: Comment your patches
+2. **Organize with subpatches**: Keep main patch clean and readable
+3. **Follow right-to-left rule**: Place objects to match execution order
+4. **Use trigger objects**: Guarantee execution order when needed
+5. **Comment liberally**: Use comment objects to document your patch
+6. **Test incrementally**: Build and test small sections before combining
+7. **Watch CPU usage**: Monitor DSP load in the status bar
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Objects and Connections" icon="diagram-project" href="/concepts/objects-and-connections">
+    Deep dive into object types and connection management
+  </Card>
+  <Card title="DAW Integration" icon="waveform-lines" href="/concepts/daw-integration">
+    Learn how plugdata works inside your DAW
+  </Card>
+</CardGroup>

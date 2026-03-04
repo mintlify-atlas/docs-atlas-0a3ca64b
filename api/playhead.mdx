@@ -1,0 +1,172 @@
+---
+title: "[playhead]"
+description: "Receive DAW playhead information"
+---
+
+## Overview
+
+The `[playhead]` object receives playhead information from the DAW, including transport state, timing, tempo, and position data. This object only works in the plugin version of plugdata.
+
+With `[playhead]`, you can synchronize your patches with the DAW's timeline, respond to transport changes, and create tempo-synchronized effects.
+
+## Outlets
+
+<ResponseField name="outlet_1" type="float">
+  **Playing state**
+  
+  Outputs `1` if the DAW is playing, `0` otherwise. Use this to trigger actions when playback starts or stops.
+</ResponseField>
+
+<ResponseField name="outlet_2" type="float">
+  **Recording state**
+  
+  Outputs `1` if the DAW is recording, `0` otherwise.
+</ResponseField>
+
+<ResponseField name="outlet_3" type="list">
+  **Loop information**
+  
+  Outputs a list of three floats: `<loop_active, loop_start, loop_end>`
+  - First value: `1` if looping is enabled, `0` otherwise
+  - Second value: Loop start position (in PPQ)
+  - Third value: Loop end position (in PPQ)
+  
+  When looping is disabled, all three values are `0`.
+</ResponseField>
+
+<ResponseField name="outlet_4" type="float">
+  **Edit time**
+  
+  The current edit time in the DAW (useful for offline processing).
+</ResponseField>
+
+<ResponseField name="outlet_5" type="float">
+  **Frame rate**
+  
+  The DAW's frame rate (frames per second). Common values include 24, 25, 30, 60, etc.
+</ResponseField>
+
+<ResponseField name="outlet_6" type="float">
+  **BPM (Tempo)**
+  
+  The current tempo in beats per minute. Use this to create tempo-synchronized effects.
+</ResponseField>
+
+<ResponseField name="outlet_7" type="float">
+  **Last bar position**
+  
+  The position of the last bar in the timeline (in PPQ).
+</ResponseField>
+
+<ResponseField name="outlet_8" type="list">
+  **Time signature**
+  
+  A list containing the time signature information: `<numerator, denominator>`
+  
+  For example, 4/4 time outputs `4 4`, and 6/8 time outputs `6 8`.
+</ResponseField>
+
+<ResponseField name="outlet_9" type="list">
+  **Position information**
+  
+  A list of three floats providing the current playhead position in different formats:
+  - **PPQ position**: Position in Pulses Per Quarter note (musical time)
+  - **Time in samples**: Position in sample frames
+  - **Time in seconds**: Position in seconds
+  
+  Example output: `16.0 176400 4.0` (at 4 seconds, 16 quarter notes, 176400 samples at 44.1kHz)
+</ResponseField>
+
+## Usage Example
+
+```pd
+#N canvas 0 0 600 400;
+
+// Monitor transport state
+[playhead]
+|
+[sel 1 0]
+|    |
+|    [print "Stopped"]
+|
+[print "Playing"]
+
+// Sync to tempo
+[playhead]
+|           \ outlet 6 (BPM)
+[unpack f f f f f f f f f f]
+              |
+              [/ 60]  // Convert BPM to beats per second
+              |
+              [/ $0]  // Get milliseconds per beat
+              |
+              [metro]  // Metronome synced to DAW tempo
+
+// Get position in bars and beats
+[playhead]
+|           \ outlet 9 (position)
+[unpack f f f f f f f f f f]
+  |
+  [/ 4]  // Convert PPQ to quarter notes (assuming 4 PPQ)
+  |
+  [int]  // Get current beat
+
+// Loop detection
+[playhead]
+|           \ outlet 3 (loop info)
+[unpack f f f f f f f f f f]
+    |
+    [sel 1]
+    |
+    [print "Looping active"]
+
+// Time signature display
+[playhead]
+|           \ outlet 8 (time signature)
+[unpack f f f f f f f f f f]
+        |
+        [pack f f]
+        |
+        [print "Time signature"]
+```
+
+## Advanced Example: Beat Counter
+
+```pd
+#N canvas 0 0 450 300;
+
+// Count beats synchronized to DAW
+[playhead]
+|\_____________________________ outlet 9
+| \____________________________ outlet 6  
+|  \___________________________ outlet 1
+[unpack f f f f f f f f f f]
+  |     |     |
+  |     |     [sel 1]  // When playing
+  |     |     |
+  |     |     [1(  // Enable counter
+  |     |     |
+  |     |     [spigot]
+  |     |     |
+  |     |     [bang~]
+  |     |     |
+  |     [/ 60]  // BPM to Hz
+  |     |
+  [/]  // Divide position by beat duration
+  |
+  [int]  // Get current beat number
+  |
+  [% 4]  // Modulo 4 for 4/4 time
+  |
+  [+ 1]  // 1-based counting
+  |
+  [print "Beat"]
+```
+
+## Notes
+
+- This object only works in plugin mode, not in standalone
+- Position data is provided in multiple formats for convenience
+- PPQ (Pulses Per Quarter) is the standard MIDI timing format
+- All outlets update whenever the playhead information changes
+- Use `[change]` objects to detect when specific values change if needed

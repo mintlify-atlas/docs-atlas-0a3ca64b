@@ -1,0 +1,149 @@
+---
+title: Objects Reference Overview
+description: Introduction to object libraries available in plugdata
+---
+
+plugindata includes a comprehensive collection of object libraries that extend Pure Data's functionality. This reference covers all available objects organized by their source library.
+
+## Available Object Libraries
+
+plugindata bundles several object libraries, each serving different purposes:
+
+<CardGroup cols={2}>
+  <Card title="Vanilla Objects" icon="cube" href="/objects/vanilla-objects">
+    Core Pure Data objects available in all PD distributions
+  </Card>
+  <Card title="ELSE Library" icon="waveform" href="/objects/else-library">
+    Comprehensive library by Alexandre Torres Porres with 570+ objects
+  </Card>
+  <Card title="Cyclone Library" icon="arrow-rotate-right" href="/objects/cyclone-library">
+    Max/MSP compatibility layer with 220+ objects
+  </Card>
+  <Card title="plugdata Objects" icon="plug" href="/objects/plugdata-objects">
+    DAW integration objects for automation, playhead, and storage
+  </Card>
+</CardGroup>
+
+## Additional Libraries
+
+Beyond the main libraries documented here, plugdata also includes:
+
+- **Gem** - Graphics and video processing objects for visual synthesis
+- **pd-lua** - Create custom objects using the Lua scripting language
+- **Heavy (hvcc)** - Compile Pure Data patches to C/C++ code
+
+## Browsing Objects
+
+### Object Browser
+
+The object browser in plugdata provides an organized view of all available objects:
+
+1. Press `Cmd/Ctrl + Shift + N` to open the object browser
+2. Browse by category or search by name
+3. Double-click or drag an object into your patch
+
+### Search Functionality
+
+Use the search bar to find objects by:
+- **Name** - Type the object name (e.g., "osc~")
+- **Category** - Filter by function (e.g., "oscillator", "filter")
+- **Library** - Filter by source (e.g., "ELSE", "cyclone")
+
+## Naming Conventions
+
+### Tilde Suffix (~)
+
+Objects ending with `~` process audio signals:
+- `osc~` - Audio oscillator (outputs signal)
+- `metro` - Control-rate metronome (outputs bangs)
+
+### Library Prefixes
+
+Some objects use library prefixes to avoid naming conflicts:
+- No prefix - Vanilla or ELSE objects
+- `else/` - Explicitly use ELSE version when conflicts exist
+- `cyclone/` - Explicitly use Cyclone version
+
+Example: Both ELSE and Cyclone have a `gate` object. Use `cyclone/gate` to specify the Max/MSP compatible version.
+
+### Common Naming Patterns
+
+**Signal Processing**
+- `bp~` - Bandpass
+- `lp~` - Lowpass  
+- `hp~` - Highpass
+- `vcf~` - Voltage-controlled filter
+
+**Oscillators**
+- `osc~` - Cosine oscillator
+- `phasor~` - Sawtooth/ramp oscillator
+- `bl.saw~` - Bandlimited sawtooth
+
+**Control Flow**
+- `metro` - Metronome
+- `delay` - Delay messages
+- `trigger` / `t` - Trigger multiple outputs
+
+**Data Types**
+- `f` - Float
+- `i` - Integer
+- `s` - Symbol
+- `l` - List
+- `b` - Bang
+
+## Object Categories
+
+Objects are organized into functional categories:
+
+- **Signal Generators** - Oscillators, noise, envelopes
+- **Signal Math** - Audio-rate mathematical operations
+- **Filters** - Audio filtering and equalization
+- **Effects** - Reverb, delay, distortion, modulation
+- **Data Math** - Control-rate calculations
+- **Logic** - Conditional operations and routing
+- **Triggers and Clocks** - Timing and sequencing
+- **MIDI** - MIDI input, output, and processing
+- **Arrays and Tables** - Data storage and manipulation
+- **UI** - User interface objects
+- **PlugData** - DAW integration
+
+## Getting Help
+
+Every object has a help patch with:
+- Description of functionality
+- Inlet/outlet documentation
+- Example usage
+- Related objects
+
+**To open help:**
+- Right-click object → "Help"
+- Select object and press `Cmd/Ctrl + H`
+
+## Library Documentation
+
+For detailed information about specific objects:
+
+- **[Vanilla Objects](/objects/vanilla-objects)** - 290+ core Pure Data objects
+- **[ELSE Library](/objects/else-library)** - 570+ objects organized by category
+- **[Cyclone Library](/objects/cyclone-library)** - 220+ Max/MSP compatible objects
+- **[plugdata Objects](/objects/plugdata-objects)** - DAW automation and integration
+
+## Best Practices
+
+### Choose the Right Library
+
+1. **Prefer ELSE over Cyclone** - ELSE objects are generally more feature-rich and better documented
+2. **Use Vanilla when possible** - Most portable across Pure Data implementations
+3. **Use plugdata objects for DAW integration** - Essential for plugin development
+
+### Performance Considerations
+
+- Signal objects (~) consume more CPU than control objects
+- Bandlimited oscillators (bl.*~) are more CPU-intensive but sound better
+- Use [block~] to optimize DSP processing
+
+### Compatibility
+
+- Vanilla objects work in all Pure Data distributions
+- ELSE and Cyclone are plugdata-specific
+- For maximum portability, stick to vanilla objects or include libraries with your patch

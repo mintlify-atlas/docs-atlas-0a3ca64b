@@ -1,0 +1,507 @@
+---
+title: Performance Optimization
+description: Optimize Pure Data patches for better CPU performance and lower latency
+---
+
+Optimizing your patches ensures smooth real-time performance, reduces CPU usage, and minimizes audio dropouts. This guide covers practical techniques for efficient patch design.
+
+## Understanding DSP Load
+
+### Monitoring CPU Usage
+
+Plugdata displays DSP load in the status bar. High CPU usage (>80%) can cause:
+- Audio dropouts and clicks
+- Increased latency
+- Unstable performance
+
+### Block Size Impact
+
+Audio processing happens in blocks. Smaller blocks = lower latency but higher CPU usage:
+
+| Block Size | Latency @ 44.1kHz | CPU Load | Use Case |
+|-----------|------------------|----------|----------|
+| 64 | ~1.5 ms | High | Live performance, low latency |
+| 128 | ~3 ms | Medium | General use |
+| 256 | ~6 ms | Low | Studio production |
+| 512 | ~12 ms | Very Low | Non-real-time processing |
+
+Access via: **Settings → Audio Settings → Block Size**
+
+## Efficient Patch Design
+
+### 1. Minimize Object Count
+
+**❌ Inefficient:**
+```pd
+[osc~ 440]
+|
+[*~ 0.1]
+|
+[+~ 0]
+|
+[*~ 1]
+|
+[dac~]
+```
+
+**✅ Optimized:**
+```pd
+[osc~ 440]
+|
+[*~ 0.1]
+|
+[dac~]
+```
+
+<Note>
+Every object has overhead. Remove unnecessary processing.
+</Note>
+
+### 2. Use Block-Level Processing
+
+Process signals at block rate instead of sample rate when possible:
+
+**❌ Sample-rate processing:**
+```pd
+[snapshot~]  <- Every sample (expensive)
+```
+
+**✅ Block-rate processing:**
+```pd
+[env~]       <- Block-rate envelope follower
+```
+
+### 3. Avoid Redundant Calculations
+
+**❌ Recalculating repeatedly:**
+```pd
+[expr 440 * 2]
+|
+[osc~]
+
+[expr 440 * 2]
+|
+[osc~]
+```
+
+**✅ Calculate once:**
+```pd
+[440(
+|
+[* 2]
+|
+[t b f f]  <- Trigger and distribute
+|   |   |
+|   |   |
+[osc~]  [osc~]
+```
+
+### 4. Use Efficient Objects
+
+Some objects are more optimized than others:
+
+| Instead of | Use | Reason |
+|------------|-----|--------|
+| `[expr~]` | `[*~]`, `[+~]` | Built-in operators are faster |
+| `[fexpr~]` | Native filters | Compiled filters are optimized |
+| Multiple `[line~]` | `[vline~]` | Handles multiple ramps efficiently |
+
+**Example:**
+
+**❌ Slower:**
+```pd
+[expr~ $v1 * 0.5 + $v2 * 0.3]
+```
+
+**✅ Faster:**
+```pd
+[*~ 0.5]  [*~ 0.3]
+|         |
++---------+
+|
+[+~]
+```
+
+## Subpatch Optimization
+
+### Use Subpatches for Organization
+
+Subpatches don't add overhead and improve readability:
+
+```pd
+[pd synthesis-engine]
+|
+[pd effects-chain]
+|
+[pd output-stage]
+```
+
+### Block Size Adjustment
+
+Use `[block~]` to optimize specific subpatches:
+
+```pd synthesis-engine
+[block~ 128]  <- Larger blocks for synthesis
+
+[phasor~ 100]
+|
+[*~ 0.5]
+|
+[outlet~]
+```
+
+```pd effects-chain  
+[block~ 64]   <- Smaller blocks for effects
+
+[inlet~]
+|
+[lop~ 1000]
+|
+[outlet~]
+```
+
+<Warning>
+`[block~]` must be a multiple or divisor of the parent block size.
+</Warning>
+
+### Switch~ for Conditional DSP
+
+Disable DSP in inactive subpatches:
+
+```pd
+[switch~ oscillator-bank 1(  <- Enable
+[switch~ oscillator-bank 0(  <- Disable (saves CPU)
+```
+
+## Signal Processing Tips
+
+### 1. Pre-compute Static Values
+
+**❌ Computing every block:**
+```pd
+[osc~ 440]
+|
+[*~ 0.707]  <- Computed every block
+```
+
+**✅ Load from message:**
+```pd
+[loadbang]
+|
+[0.707(
+|
+[sig~]  <- Converted once
+|
+[*~]
+```
+
+For dynamic but infrequent changes:
+```pd
+[r volume]     <- Receive volume changes
+|
+[line~ 0 10]   <- Smooth over 10ms
+|
+[*~]           <- Multiply signal
+```
+
+### 2. Table Lookups
+
+Use tables for complex functions:
+
+**❌ Expensive calculation:**
+```pd
+[expr~ sin($v1 * 6.28318)]  <- Computed per sample
+```
+
+**✅ Table lookup:**
+```pd
+[tabosc4~ sine-table]  <- Fast table lookup with interpolation
+```
+
+### 3. Filter Optimization
+
+Choose appropriate filter types:
+
+| Filter | CPU | Quality | Use Case |
+|--------|-----|---------|----------|
+| `[lop~]` / `[hip~]` | Low | Basic | Simple filtering |
+| `[vcf~]` | Medium | Good | Voltage-controlled filter |
+| `[biquad~]` | Medium | High | Precise EQ |
+| `[fexpr~]` | High | Custom | Only when necessary |
+
+## Message Domain Optimization
+
+### 1. Reduce Message Rate
+
+**❌ Flooding with messages:**
+```pd
+[metro 1]  <- 1000 messages/second
+```
+
+**✅ Appropriate rate:**
+```pd
+[metro 50]  <- 20 messages/second (often sufficient)
+```
+
+### 2. Use [trigger] Efficiently
+
+Control message order and avoid fan-out issues:
+
+```pd
+[trigger b f f s]  <- Explicit, right-to-left order
+```
+
+### 3. Throttle GUI Updates
+
+**❌ Updating every message:**
+```pd
+[metro 1]
+|
+[random 100]
+|
+[nbx]  <- GUI update every 1ms (expensive)
+```
+
+**✅ Throttled updates:**
+```pd
+[metro 1]        [metro 50]  <- Separate timers
+|                |
+[random 100]     |
+|                |
+[t b f]----------+  
+  |              |
+  [compute]      [nbx]  <- GUI updates at 20 Hz
+```
+
+## Profiling with Perfetto
+
+For advanced optimization, use Perfetto profiling:
+
+<Steps>
+
+### Step 1: Enable Perfetto
+
+Build plugdata with profiling enabled:
+
+```bash
+cmake .. -DENABLE_PERFETTO=1 -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+<Note>
+From CMakeLists.txt:37, 145-147, 329, 417-420, 840-854
+</Note>
+
+### Step 2: Instrument Your Code
+
+Add trace points to C++ code:
+
+```cpp
+void myProcessingFunction() {
+    TRACE_COMPONENT();  // Traces this function
+    
+    // Your processing code
+}
+```
+
+Or use automated instrumentation:
+
+```bash
+python3 Resources/Scripts/add_perfetto_tracepoints.py Source/**/*.cpp
+```
+
+<Warning>
+Requires LLVM >= 19.1.3 and compatible libclang.
+</Warning>
+
+### Step 3: Capture Trace
+
+1. Run plugdata
+2. Load and run your patch
+3. Capture trace file
+4. Open at [ui.perfetto.dev](https://ui.perfetto.dev)
+
+### Step 4: Analyze Results
+
+Look for:
+- Long-running functions
+- Unexpected CPU spikes  
+- Blocking operations
+- Memory allocations in DSP
+
+See: [Using Perfetto with JUCE](https://melatonin.dev/blog/using-perfetto-with-juce-for-dsp-and-ui-performance-tuning/)
+
+</Steps>
+
+## Memory Management
+
+### 1. Avoid Memory Allocation in DSP
+
+**❌ Allocating in perform routine:**
+```c
+t_int *perform(t_int *w) {
+    float *buffer = malloc(1024);  // BAD!
+    // ...
+    free(buffer);
+}
+```
+
+**✅ Pre-allocate in constructor:**
+```c
+void *new(void) {
+    t_myobj *x = malloc(sizeof(t_myobj));
+    x->buffer = malloc(1024);  // Allocate once
+    return x;
+}
+```
+
+### 2. Use Fixed-Size Buffers
+
+```c
+#define MAX_BUFFER 4096
+
+typedef struct {
+    float buffer[MAX_BUFFER];  // Static allocation
+} t_myobj;
+```
+
+## Audio Thread Priority
+
+### Understanding Real-Time Priority
+
+Plugdata runs audio in a high-priority thread. Keep audio callbacks fast:
+
+- ⏱️ **Target**: < 50% of block time
+- ⚠️ **Warning**: > 80% may cause dropouts
+- ❌ **Critical**: > 100% = guaranteed dropouts
+
+### Don't Block Audio Thread
+
+**❌ Never do in DSP:**
+- File I/O
+- Network operations
+- GUI updates
+- Memory allocation
+- Mutex locks (if avoidable)
+- `sleep()` or delays
+
+**✅ Do instead:**
+- Use lock-free queues for communication
+- Pre-load data in non-real-time thread
+- Defer non-critical work
+
+## Platform-Specific Optimization
+
+### macOS
+
+**Metal Rendering:**
+Enabled by default for better graphics performance (CMakeLists.txt:53, 376-382).
+
+**Disable if needed:**
+```bash
+cmake .. -DNANOVG_METAL_IMPLEMENTATION=OFF
+```
+
+### Windows
+
+**Use ASIO** for lowest latency (automatically included, CMakeLists.txt:320, 385).
+
+### Linux
+
+**JACK** provides better performance than ALSA for real-time audio:
+- Lower latency
+- Better CPU scheduling
+- Inter-application routing
+
+Enabled by default (CMakeLists.txt:308, 313).
+
+## Benchmark Example
+
+Create test patches to measure performance:
+
+```pd test-oscillators.pd
+# Test 1: Single oscillator
+[loadbang]
+|
+[1(
+|
+[until]
+|
+[osc~ 440]  
+|
+[dac~]
+
+# Test 2: 100 oscillators  
+[loadbang]
+|
+[100(
+|
+[until]
+|
+[pd voice]
+  |
+  [osc~ 440]
+  |
+  [outlet~]
+|
+[dac~]
+```
+
+Monitor CPU load to compare approaches.
+
+## Quick Optimization Checklist
+
+- [ ] Remove unnecessary objects
+- [ ] Use efficient alternatives ([*~] vs [expr~])
+- [ ] Avoid redundant calculations
+- [ ] Use appropriate block sizes
+- [ ] Throttle GUI updates
+- [ ] Pre-compute static values
+- [ ] Use [switch~] for inactive sections
+- [ ] Profile with Perfetto (if needed)
+- [ ] Check DSP load in status bar
+- [ ] Test on target hardware
+
+## Common Bottlenecks
+
+### 1. Too Many [expr~] Objects
+
+**Problem:** Each [expr~] is interpreted at runtime.
+
+**Solution:** Replace with native objects or write C external.
+
+### 2. Excessive GUI Objects
+
+**Problem:** VU meters, scopes updating every block.
+
+**Solution:** Update at lower rate (20-30 Hz).
+
+### 3. Large FFT Operations
+
+**Problem:** FFT size too large for block size.
+
+**Solution:** Use power-of-2 sizes, increase block size in subpatch.
+
+### 4. Many Small Subpatches
+
+**Problem:** Overhead from subpatch management.
+
+**Solution:** Consolidate when possible, but balance with readability.
+
+## Resources
+
+- Perfetto profiling: CMakeLists.txt:37, Resources/Scripts/add_perfetto_tracepoints.py
+- Block size settings: CMakeLists.txt:31, 113-117
+- Audio backend config: CMakeLists.txt:308-321
+- DSP optimization guide: [Pure Data Documentation](http://puredata.info)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building from Source" icon="hammer" href="/advanced/building-from-source">
+    Compile optimized builds
+  </Card>
+  <Card title="Adding Externals" icon="puzzle-piece" href="/advanced/adding-externals">
+    Create optimized C externals
+  </Card>
+</CardGroup>

@@ -1,0 +1,291 @@
+---
+title: "[daw_storage]"
+description: "Store data inside DAW session state"
+---
+
+## Overview
+
+The `[daw_storage]` object allows storage of arrays, lists, and symbols as extra data within the DAW session. This enables your patches to save and restore state alongside the DAW project, perfect for storing preset data, configuration, lookup tables, or any other data that should persist with the session.
+
+When the DAW project is saved, data sent to `[daw_storage]` is serialized and stored. When the project is loaded, the stored data is automatically sent out the outlet.
+
+## Arguments
+
+<ParamField path="storage_id" type="symbol" default="empty">
+  Unique identifier for the stored data. Each `[daw_storage]` object needs a unique ID to distinguish its data from other storage objects in the patch.
+  
+  The ID must:
+  - Start with an alphabetical character
+  - Be a valid XML element name
+  - Be unique within the patch
+</ParamField>
+
+## Inlets
+
+<ResponseField name="inlet_1" type="anything">
+  Extra data to be stored with the DAW session. Accepts:
+  - **Lists**: Sequences of floats and symbols
+  - **Symbols**: Text data
+  - **Numbers**: Float values
+  - **Arrays**: Data arrays (will be converted to lists)
+  
+  The first element must be a symbol (the storage ID).
+</ResponseField>
+
+## Outlets
+
+<ResponseField name="outlet_1" type="anything">
+  Outputs the last stored data when the patch is loaded. This happens automatically when the DAW project is opened, allowing your patch to restore its saved state.
+</ResponseField>
+
+## Usage Examples
+
+### Basic List Storage
+
+```pd
+#N canvas 0 0 450 300;
+
+// Store a list of values
+[1 2 3 4 5(
+|
+[daw_storage my_list]
+|
+[print "Loaded list"]
+
+// Store configuration data
+[mode 3, freq 440, gain 0.8(
+|
+[daw_storage synth_config]
+|
+[route mode freq gain]
+|     |    |
+[print mode] [print freq] [print gain]
+```
+
+### Array Storage and Retrieval
+
+```pd
+#N canvas 0 0 500 400;
+
+// Initialize array on load
+[loadbang]
+|
+[table my_array 128]
+
+// Store array contents to DAW
+[bang(
+|
+[until]
+|
+[f]  [+ 1]
+|  \\ /
+|   [t f f]
+|   |    |
+|   |    [tabread my_array]
+|   |
+|   [pack f f]
+|
+[daw_storage array1]
+
+// Restore array from DAW
+[daw_storage array1]
+|
+[route set]
+|
+[unpack f f]
+|        |
+|        [tabwrite my_array]
+|
+[print "Array index"]
+```
+
+### Preset System
+
+```pd
+#N canvas 0 0 600 400;
+
+// Store current preset
+[r save_preset]
+|
+[pack f f f f]  // Collect all parameters
+|
+[daw_storage current_preset]
+
+// Recall preset on load
+[daw_storage current_preset]
+|
+[unpack f f f f]
+|     |  |  |
+|     |  |  [s param_4]
+|     |  |
+|     |  [s param_3]
+|     |
+|     [s param_2]
+|
+[s param_1]
+
+// Parameters
+[r param_1] [r param_2] [r param_3] [r param_4]
+|           |           |           |
+[hslider]   [hslider]   [hslider]   [hslider]
+```
+
+### Multiple Storage Objects
+
+```pd
+#N canvas 0 0 500 350;
+
+// Store different types of data
+[bang(
+|
+[t b b b]
+|    |  |
+|    |  [wavetable_data(
+|    |  |
+|    |  [daw_storage wavetable]
+|    |
+|    [eq_settings 200 0.7 3000 -2(
+|    |
+|    [daw_storage eq_params]
+|
+[delay_time 500(
+|
+[daw_storage effect_state]
+
+// Each has its own unique ID and restores independently
+[daw_storage wavetable]
+|
+[print "Wavetable"]
+
+[daw_storage eq_params]
+|
+[print "EQ"]
+
+[daw_storage effect_state]
+|
+[print "Effects"]
+```
+
+### Text/Symbol Storage
+
+```pd
+#N canvas 0 0 450 300;
+
+// Store text data
+[symbol "This is my custom patch note"(
+|
+[daw_storage patch_notes]
+|
+[print]
+
+// Store patch mode
+[symbol mono(  // or [symbol poly(
+|
+[daw_storage voice_mode]
+|
+[route mono poly]
+|          |
+|          [print "Poly mode"]
+|
+[print "Mono mode"]
+```
+
+## Advanced Example: Complete State Management
+
+```pd
+#N canvas 0 0 700 500;
+
+// ===== State Saver =====
+[r save_all_state]
+|
+[t b b b b]
+|    |  |  |
+|    |  |  [; pd dsp 1(  // Save DSP state
+|    |  |  |
+|    |  |  [daw_storage dsp_state]
+|    |  |
+|    |  [r~ audio_params]  // Save audio parameters  
+|    |  |
+|    |  [snapshot~]
+|    |  |
+|    |  [daw_storage audio_params]
+|    |
+|    [r midi_cc_values]  // Save MIDI learn values
+|    |
+|    [daw_storage midi_state]
+|
+[r ui_settings]  // Save UI state
+|
+[daw_storage ui_state]
+
+// ===== State Restorer =====
+[loadbang]
+|
+[t b b b b]
+|    |  |  |
+|    |  |  [daw_storage dsp_state]
+|    |  |  |
+|    |  |  [s restore_dsp]
+|    |  |
+|    |  [daw_storage midi_state]
+|    |  |
+|    |  [s restore_midi]
+|    |
+|    [daw_storage audio_params]
+|    |
+|    [s restore_audio]
+|
+[daw_storage ui_state]
+|
+[s restore_ui]
+```
+
+## Important Notes
+
+<Warning>
+  **Data Format Requirements**
+  
+  - The first element must be a symbol (used as the XML element name)
+  - The storage ID must start with an alphabetical character
+  - Invalid XML characters in the ID will cause a warning
+</Warning>
+
+<Note>
+  **When Data is Saved**
+  
+  Data is automatically saved when:
+  - The DAW project is saved
+  - A plugin preset is saved
+  - The plugin state is serialized
+</Note>
+
+<Note>
+  **When Data is Restored**
+  
+  Data is automatically sent out the outlet when:
+  - The DAW project is loaded
+  - A plugin preset is loaded  
+  - The plugin state is restored
+</Note>
+
+## Implementation Details
+
+Internally, `[daw_storage]` uses XML serialization:
+
+```xml
+<ExtraData>
+  <my_list>
+    <float1>1.0</float1>
+    <float2>2.0</float2>
+    <string1>hello</string1>
+  </my_list>
+</ExtraData>
+```
+
+See `PluginProcessor.cpp:2143` (fillDataBuffer) and `PluginProcessor.cpp:2181` (parseDataBuffer) for implementation details.
+
+## See Also
+
+- `[param]` - DAW automation parameters
+- `[table]` - Arrays for storing data
+- `[text]` - Text storage and manipulation

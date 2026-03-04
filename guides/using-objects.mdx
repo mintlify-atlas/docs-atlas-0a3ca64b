@@ -1,0 +1,507 @@
+---
+title: Using Objects
+description: Learn how to browse, search, and work with Pure Data objects in plugdata including reading help files and understanding object arguments
+---
+
+# Using Objects
+
+This guide covers everything you need to know about working with objects in plugdata, from browsing the object library to understanding inlets, outlets, and arguments.
+
+## Object Browser
+
+Plugdata includes a comprehensive object browser for discovering and learning about available objects.
+
+### Opening the Object Browser
+
+<Steps>
+  <Step title="Open Browser">
+    Press **Shift+?** or select **View > Object Browser** from the menu
+  </Step>
+  
+  <Step title="Search for Objects">
+    Type in the search field to filter objects by name or description
+  </Step>
+  
+  <Step title="Browse by Category">
+    Click categories on the left to browse organized object collections
+  </Step>
+  
+  <Step title="Add to Canvas">
+    Click an object in the browser to add it to your canvas, or drag it to a specific position
+  </Step>
+</Steps>
+
+### Object Categories
+
+Objects are organized into several categories:
+
+- **Audio** - Signal processing (oscillators, filters, effects)
+- **Control** - Message processing and logic
+- **UI** - GUI objects for interaction
+- **Data** - Data structures and manipulation
+- **MIDI** - MIDI input and output
+- **Math** - Mathematical operations
+- **Time** - Timing and sequencing
+- **File I/O** - Reading and writing files
+
+<Tip>
+Use the Documentation Browser (Cmd/Ctrl+B) in the sidebar for quick access to object documentation while patching.
+</Tip>
+
+## Searching for Objects
+
+### Quick Search
+
+When creating a new object, plugdata provides intelligent suggestions:
+
+1. Press **Cmd/Ctrl+1** to create an object
+2. Start typing - autocomplete suggestions appear
+3. Use **↑↓ arrows** to navigate suggestions
+4. Press **Enter** to select
+
+### Documentation Browser Search
+
+<Steps>
+  <Step title="Open Documentation">
+    Press **Cmd/Ctrl+B** or click the Documentation Browser tab in the sidebar
+  </Step>
+  
+  <Step title="Enter Search Query">
+    Type in the search field to find objects by name, description, or category
+  </Step>
+  
+  <Step title="View Details">
+    Click an object to see its documentation including:
+    - Description and purpose
+    - Inlet and outlet types
+    - Creation arguments
+    - Example usage
+  </Step>
+  
+  <Step title="Open Reference">
+    Click "Open Reference" to see the full documentation page
+  </Step>
+</Steps>
+
+### Finding Objects in Current Patch
+
+To search within your current patch:
+
+1. Press **Cmd/Ctrl+F**
+2. Enter search text (object names, message content, comments)
+3. Navigate results with **Enter** or arrow buttons
+4. Click results to highlight objects on canvas
+
+<Note>
+The search panel appears in the sidebar and highlights matching objects with a colored outline on the canvas.
+</Note>
+
+## Reading Help Files
+
+### Accessing Help
+
+Every object in plugdata has associated documentation:
+
+<Tabs>
+  <Tab title="Reference">
+    View quick reference information:
+    
+    1. Select an object
+    2. Press **F1** or right-click > "Reference"
+    3. See concise documentation including:
+       - Object description
+       - Inlet/outlet definitions
+       - Arguments and messages
+       - Related objects
+  </Tab>
+  
+  <Tab title="Help Patch">
+    Open interactive help patch:
+    
+    1. Select an object  
+    2. Press **F2** or right-click > "Help"
+    3. Explore working examples
+    4. Test object behavior interactively
+    5. Copy examples to your patch
+  </Tab>
+</Tabs>
+
+### Help Patch Features
+
+Help patches are interactive demonstrations:
+
+- **Live Examples** - Working patches you can interact with
+- **Explanatory Comments** - Detailed descriptions of functionality
+- **Multiple Use Cases** - Common usage patterns
+- **Related Objects** - Links to similar objects
+- **Audio Examples** - For signal processing objects
+
+<Tip>
+Keep help patches open in separate tabs as reference while building your own patches.
+</Tip>
+
+## Understanding Object Arguments
+
+### Creation Arguments
+
+Many objects accept arguments when created:
+
+```pd
+osc~ 440              # Oscillator at 440Hz
+metro 1000            # Metronome at 1000ms interval
++ 10                  # Add 10 to input
+random 100            # Random 0-99
+delay 500 1000        # Delay with initial and max time
+```
+
+**Argument Types:**
+- **Numbers** - Integers or floats: `440`, `1.5`, `-10`
+- **Symbols** - Text: `sine`, `hann`, `myname`
+- **Quoted Strings** - Text with spaces: `"hello world"`
+
+### Required vs Optional Arguments
+
+Check documentation to understand argument requirements:
+
+- **Required** - Object won't function without them
+- **Optional** - Have default values if omitted
+- **Variable** - Accept multiple arguments
+
+```pd
+osc~                  # Error: frequency required
+osc~ 440              # OK: frequency provided
+metro                 # OK: defaults to 0 (off)
+metro 500             # OK: explicit interval
+```
+
+### Dynamic Arguments
+
+Some objects let you change arguments after creation:
+
+```pd
+[osc~ 440]            # Fixed frequency
+  |
+[frequency $1(       # Message to change frequency
+  |
+[osc~]                # Frequency controlled by inlet
+```
+
+<Note>
+Audio rate arguments (like oscillator frequency) typically have both creation argument and inlet control options.
+</Note>
+
+## Understanding Inlets and Outlets
+
+### Inlet Types
+
+<Tabs>
+  <Tab title="Hot Inlets">
+    The **leftmost inlet** is "hot" - triggers output when it receives data:
+    
+    ```pd
+    [+ 5]               # Left inlet: triggers addition
+                        # Right inlet: sets the value to add
+    ```
+    
+    Hot inlets process immediately and send results to outlets.
+  </Tab>
+  
+  <Tab title="Cold Inlets">
+    **Right inlets** are "cold" - store values without triggering:
+    
+    ```pd
+    [+]                 # Receives 5 on right inlet (stored)
+                        # Receives 3 on left inlet (outputs 8)
+    ```
+    
+    Cold inlets prepare data for the next hot inlet trigger.
+  </Tab>
+  
+  <Tab title="Signal Inlets">
+    Audio rate inlets (marked with ~):
+    
+    ```pd
+    [*~]                # Both inlets process audio continuously
+                        # No hot/cold distinction for signals
+    ```
+    
+    Process continuously at audio rate.
+  </Tab>
+</Tabs>
+
+### Outlet Types
+
+Outlets send different data types:
+
+- **Message Outlets** - Send control messages (numbers, symbols, lists)
+- **Signal Outlets** - Send audio-rate signals (continuous data)
+
+**Visual Distinction:**
+- Thin connections = messages
+- Thick connections = signals
+
+### Multi-Outlet Objects
+
+Some objects have multiple outlets for different purposes:
+
+```pd
+[route note velocity]
+  |      |            # First outlet: note numbers
+         |            # Second outlet: velocities
+
+[unpack f f f]       
+  |    |  |          # Three outlets for unpacking lists
+```
+
+**Outlet Order:**
+Outlets are numbered left to right (0, 1, 2...) and often output in right-to-left order.
+
+<Warning>
+Some objects output from right to left intentionally to allow sequential processing. Check documentation for specific objects.
+</Warning>
+
+## Working with GUI Objects
+
+### Common GUI Objects
+
+<Accordion title="Bang (Cmd/Ctrl+Shift+B)">
+  Sends a bang message when clicked:
+  
+  - Click in run mode to trigger
+  - Can receive bangs from other objects
+  - Use for triggering events, resetting states
+  
+  **Properties:**
+  - Size, colors, label
+  - Send/receive names for remote control
+</Accordion>
+
+<Accordion title="Toggle (Cmd/Ctrl+Shift+T)">
+  Binary on/off switch:
+  
+  - Outputs 1 when on, 0 when off
+  - Click to toggle state
+  - Send 1 or 0 to set remotely
+  
+  **Usage:**
+  - Gate signals on/off
+  - Boolean logic
+  - State indicators
+</Accordion>
+
+<Accordion title="Number Box (Cmd/Ctrl+Shift+N)">
+  Display and input numeric values:
+  
+  - Click and drag vertically to change value
+  - Double-click to type exact value
+  - Outputs on change
+  
+  **Properties:**
+  - Min/max range
+  - Display precision
+  - Output on load
+</Accordion>
+
+<Accordion title="Sliders (Cmd/Ctrl+Shift+V/J)">
+  Continuous value control:
+  
+  - Vertical (V) or Horizontal (J)
+  - Drag to change value
+  - Configurable range and output
+  
+  **Settings:**
+  - Min/max values
+  - Linear or logarithmic scaling
+  - Send symbol for remote control
+</Accordion>
+
+<Accordion title="Radio Buttons (Cmd/Ctrl+Shift+D/I)">
+  Select one option from many:
+  
+  - Vertical (D) or Horizontal (I)  
+  - Click to select
+  - Outputs selected index (0-based)
+  
+  **Properties:**
+  - Number of options
+  - Size and spacing
+  - Initial selection
+</Accordion>
+
+### GUI Object Properties
+
+Configure GUI objects in the Inspector panel:
+
+1. Select GUI object
+2. Open Inspector (wrench icon in sidebar)
+3. Modify properties:
+   - **Dimensions** - Size and position
+   - **Appearance** - Colors, fonts, borders
+   - **Range** - Min/max values
+   - **Label** - Text and position
+   - **Send/Receive** - Remote control names
+
+### Send and Receive Names
+
+GUI objects can be controlled remotely:
+
+```pd
+# Number box with receive name "volume"
+[nbx]  (receive: volume)
+
+# Control it from anywhere:
+[75(               # Set to 75
+  |
+[send volume]
+```
+
+<Tip>
+Use descriptive send/receive names like `master-volume` or `filter-freq` instead of generic names.
+</Tip>
+
+## Object-Specific Features
+
+### Audio Objects (~ suffix)
+
+Objects ending in ~ process audio signals:
+
+```pd
+[osc~ 440]         # Audio oscillator
+[*~ 0.5]           # Audio multiplication  
+[lop~ 1000]        # Lowpass filter
+[dac~]             # Audio output
+```
+
+**Key Points:**
+- Operate at sample rate (typically 44100 Hz)
+- Use thick connection lines
+- Cannot directly connect to message objects
+- Use `snapshot~` to convert to messages
+- Use `sig~` to convert messages to signals
+
+### Message Processing Objects
+
+Control-rate objects for discrete events:
+
+```pd
+[metro 500]        # Metronome
+[+], [-], [*], [/] # Math
+[route]            # Message routing
+[select]           # Match and route
+[trigger]          # Split and convert
+```
+
+### Conversion Objects
+
+<Steps>
+  <Step title="Message to Signal">
+    Use `sig~` to convert numbers to audio signals:
+    ```pd
+    [440(
+      |
+    [sig~]
+      |
+    [osc~]  # Frequency as signal
+    ```
+  </Step>
+  
+  <Step title="Signal to Message">
+    Use `snapshot~` to sample signals:
+    ```pd
+    [osc~ 1]        # LFO
+      |
+    [snapshot~]     # Sample on bang
+      |
+    [print]         # Show value
+    ```
+  </Step>
+</Steps>
+
+## Object Libraries
+
+### Vanilla Pd
+
+Core Pure Data objects:
+- Standard operations and signal processing
+- Maximum compatibility
+- Built into all Pd distributions
+
+### ELSE Library
+
+Extended collection included with plugdata:
+- Additional oscillators and filters
+- Enhanced GUI objects
+- Utility objects for common tasks
+- Comprehensive help files
+
+**Usage:** Most ELSE objects work without prefix
+```pd
+[sine~]            # ELSE oscillator
+[slider]           # ELSE slider
+[button]           # ELSE button
+```
+
+### Cyclone Library
+
+Max/MSP compatibility objects:
+- Similar to Max objects
+- Helpful for Max users
+
+**Usage:** Use cyclone/ prefix or enable in settings
+```pd
+[cyclone/scope~]   # Oscilloscope
+[cyclone/coll]     # Data collection
+```
+
+<Note>
+Plugdata ships with ELSE and Cyclone libraries included. Additional externals can be added - see the Extensions guide.
+</Note>
+
+## Best Practices
+
+### Object Naming
+
+✅ **Good:**
+```pd
+[osc~ 440]         # Clear purpose
+[metro 500]        # Explicit timing
+[+ 10]             # Shows operation
+```
+
+❌ **Avoid:**
+```pd
+[osc~]             # Missing frequency
+[metro]            # No timing info
+[+]                # Unclear what's added
+```
+
+### Documentation
+
+Always document complex object chains:
+
+```pd
+[comment Filter section - 2-pole resonant lowpass]
+[inlet~]           # Audio input
+  |
+[lop~ 1000]        # Cutoff at 1kHz
+  |
+[lop~ 1000]        # Second pole for 12dB/oct slope
+  |
+[outlet~]          # Filtered output
+```
+
+### Error Handling
+
+Watch the console for:
+- **Object not found** - Check spelling or install external
+- **Bad arguments** - Verify argument types and order
+- **Signal/message mismatch** - Use conversion objects
+
+## Next Steps
+
+Now that you understand objects:
+
+- [Creating Patches](/guides/creating-patches) - Build complete patches with objects
+- [Automation Parameters](/guides/automation-parameters) - Control objects from your DAW
+- [Audio Routing](/guides/audio-routing) - Set up complex audio flows
+- [Objects Overview](/objects/overview) - Complete object documentation

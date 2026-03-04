@@ -1,0 +1,435 @@
+---
+title: "pd::Instance"
+description: "Pure Data instance wrapper and message dispatcher"
+---
+
+## Overview
+
+The `pd::Instance` class wraps libpd and provides a C++ interface for managing Pure Data instances. It handles DSP processing, MIDI events, message passing, patch loading, and communication between the GUI and the Pure Data audio engine.
+
+Location: `Source/Pd/Instance.h`
+
+## Class Declaration
+
+```cpp
+namespace pd {
+    class Instance : public AsyncUpdater {
+        // ...
+    };
+}
+```
+
+## Constructor and Initialization
+
+<ParamField path="Instance" type="constructor">
+  ```cpp
+  explicit Instance();
+  ```
+  
+  Creates a new Pure Data instance. Each instance is isolated from others.
+</ParamField>
+
+<ParamField path="initialisePd" type="void">
+  ```cpp
+  void initialisePd(String& pdlua_version);
+  ```
+  
+  Initialize Pure Data and load required libraries. Call this before using the instance.
+</ParamField>
+
+## DSP Control
+
+<ParamField path="prepareDSP" type="void">
+  ```cpp
+  void prepareDSP(int nins, int nouts, double samplerate);
+  ```
+  
+  Prepare DSP processing with specified channel counts and sample rate.
+  
+  **Parameters:**
+  - `nins` - Number of input channels
+  - `nouts` - Number of output channels  
+  - `samplerate` - Sample rate in Hz
+</ParamField>
+
+<ParamField path="startDSP" type="void">
+  ```cpp
+  void startDSP();
+  void releaseDSP();
+  ```
+  
+  Start or stop DSP processing.
+</ParamField>
+
+<ParamField path="performDSP" type="void">
+  ```cpp
+  void performDSP(float const* inputs, float* outputs);
+  ```
+  
+  Process one block of audio. Call this from your audio callback.
+  
+  **Parameters:**
+  - `inputs` - Interleaved input audio buffer
+  - `outputs` - Interleaved output audio buffer
+  
+  Buffer size is determined by `getBlockSize()`.
+</ParamField>
+
+<ParamField path="getBlockSize" type="int">
+  ```cpp
+  static int getBlockSize();
+  ```
+  
+  Get Pure Data's block size (typically 64 samples).
+</ParamField>
+
+## Sending MIDI to Pure Data
+
+<ParamField path="sendNoteOn" type="void">
+  ```cpp
+  void sendNoteOn(int channel, int pitch, int velocity) const;
+  ```
+  
+  Send MIDI note on message.
+</ParamField>
+
+<ParamField path="sendControlChange" type="void">
+  ```cpp
+  void sendControlChange(int channel, int controller, int value) const;
+  ```
+  
+  Send MIDI control change message.
+</ParamField>
+
+<ParamField path="sendProgramChange" type="void">
+  ```cpp
+  void sendProgramChange(int channel, int value) const;
+  ```
+  
+  Send MIDI program change message.
+</ParamField>
+
+<ParamField path="sendPitchBend" type="void">
+  ```cpp
+  void sendPitchBend(int channel, int value) const;
+  ```
+  
+  Send MIDI pitch bend message (value range: 0-16383).
+</ParamField>
+
+<ParamField path="sendAfterTouch" type="void">
+  ```cpp
+  void sendAfterTouch(int channel, int value) const;
+  ```
+  
+  Send MIDI channel aftertouch message.
+</ParamField>
+
+<ParamField path="sendPolyAfterTouch" type="void">
+  ```cpp
+  void sendPolyAfterTouch(int channel, int pitch, int value) const;
+  ```
+  
+  Send MIDI polyphonic aftertouch message.
+</ParamField>
+
+<ParamField path="sendMidiByte" type="void">
+  ```cpp
+  void sendMidiByte(int port, int byte) const;
+  void sendSysEx(int port, int byte) const;
+  void sendSysRealTime(int port, int byte) const;
+  ```
+  
+  Send raw MIDI bytes, SysEx, or real-time messages.
+</ParamField>
+
+## Receiving MIDI from Pure Data
+
+These are pure virtual methods that must be implemented by subclasses:
+
+<ParamField path="receiveNoteOn" type="virtual">
+  ```cpp
+  virtual void receiveNoteOn(int channel, int pitch, int velocity) = 0;
+  virtual void receiveControlChange(int channel, int controller, int value) = 0;
+  virtual void receiveProgramChange(int channel, int value) = 0;
+  virtual void receivePitchBend(int channel, int value) = 0;
+  virtual void receiveAftertouch(int channel, int value) = 0;
+  virtual void receivePolyAftertouch(int channel, int pitch, int value) = 0;
+  virtual void receiveMidiByte(int port, int byte) = 0;
+  ```
+  
+  Callbacks for MIDI messages coming from Pure Data (e.g., from `[noteout]`, `[ctlout]`, etc.).
+</ParamField>
+
+## Sending Messages to Pure Data
+
+<ParamField path="sendBang" type="void">
+  ```cpp
+  void sendBang(char const* receiver) const;
+  ```
+  
+  Send bang to a receiver.
+  
+  Example:
+  ```cpp
+  instance->sendBang("trigger-event");
+  ```
+</ParamField>
+
+<ParamField path="sendFloat" type="void">
+  ```cpp
+  void sendFloat(char const* receiver, float value) const;
+  ```
+  
+  Send float value to a receiver.
+  
+  Example:
+  ```cpp
+  instance->sendFloat("frequency", 440.0f);
+  ```
+</ParamField>
+
+<ParamField path="sendSymbol" type="void">
+  ```cpp
+  void sendSymbol(char const* receiver, char const* symbol) const;
+  ```
+  
+  Send symbol to a receiver.
+  
+  Example:
+  ```cpp
+  instance->sendSymbol("mode", "lowpass");
+  ```
+</ParamField>
+
+<ParamField path="sendList" type="void">
+  ```cpp
+  void sendList(char const* receiver, SmallArray<pd::Atom> const& list) const;
+  ```
+  
+  Send list of atoms to a receiver.
+  
+  Example:
+  ```cpp
+  SmallArray<pd::Atom> list = {1.0f, 2.0f, 3.0f};
+  instance->sendList("data-receiver", list);
+  ```
+</ParamField>
+
+<ParamField path="sendMessage" type="void">
+  ```cpp
+  void sendMessage(char const* receiver, char const* msg, SmallArray<pd::Atom> const& list) const;
+  ```
+  
+  Send named message with arguments to a receiver.
+  
+  Example:
+  ```cpp
+  SmallArray<pd::Atom> args = {100.0f, 200.0f};
+  instance->sendMessage("osc", "range", args);
+  ```
+</ParamField>
+
+<ParamField path="sendDirectMessage" type="void">
+  ```cpp
+  void sendDirectMessage(void* object, SmallString const& msg, SmallArray<Atom>&& list);
+  void sendDirectMessage(void* object, SmallArray<pd::Atom>&& list);
+  void sendDirectMessage(void* object, SmallString const& msg);
+  void sendDirectMessage(void* object, float msg);
+  ```
+  
+  Send message directly to a specific Pure Data object (not by name).
+</ParamField>
+
+## Patch Management
+
+<ParamField path="openPatch" type="Patch::Ptr">
+  ```cpp
+  Patch::Ptr openPatch(File const& toOpen);
+  ```
+  
+  Open a Pure Data patch file. Returns a smart pointer to the loaded patch.
+  
+  Example:
+  ```cpp
+  auto patch = instance->openPatch(File("/path/to/synth.pd"));
+  if (patch) {
+      DBG("Patch loaded successfully");
+  }
+  ```
+</ParamField>
+
+<ParamField path="patches" type="SmallArray<pd::Patch::Ptr>">
+  ```cpp
+  SmallArray<pd::Patch::Ptr, 16> patches;
+  ```
+  
+  Array of all currently opened patches.
+</ParamField>
+
+## Message Listeners
+
+<ParamField path="registerMessageListener" type="void">
+  ```cpp
+  void registerMessageListener(void* object, MessageListener* messageListener);
+  void unregisterMessageListener(MessageListener* messageListener);
+  ```
+  
+  Register/unregister listeners for messages from specific Pure Data objects.
+</ParamField>
+
+## Thread Safety
+
+<ParamField path="lockAudioThread" type="void">
+  ```cpp
+  void lockAudioThread();
+  void unlockAudioThread();
+  ```
+  
+  Lock/unlock the audio thread mutex. Use this when accessing Pure Data from the GUI thread.
+  
+  Example:
+  ```cpp
+  instance->lockAudioThread();
+  // Safe to modify Pure Data state here
+  instance->sendFloat("param", value);
+  instance->unlockAudioThread();
+  ```
+</ParamField>
+
+<ParamField path="enqueueFunctionAsync" type="void">
+  ```cpp
+  void enqueueFunctionAsync(std::function<void()> const& fn);
+  
+  template<typename T>
+  void enqueueFunctionAsync(WeakReference& ref, std::function<void(T*)> const& fn);
+  ```
+  
+  Enqueue a function to be executed safely from the message thread.
+  
+  Example:
+  ```cpp
+  instance->enqueueFunctionAsync([this]() {
+      // This runs on the message thread
+      updateGUI();
+  });
+  ```
+</ParamField>
+
+## Symbol Generation
+
+<ParamField path="generateSymbol" type="t_symbol*">
+  ```cpp
+  t_symbol* generateSymbol(String const& symbol) const;
+  t_symbol* generateSymbol(SmallString const& symbol) const;
+  t_symbol* generateSymbol(char const* symbol) const;
+  ```
+  
+  Generate a Pure Data symbol from a string. Symbols are interned (unique).
+</ParamField>
+
+## Console and Logging
+
+<ParamField path="logMessage" type="void">
+  ```cpp
+  void logMessage(String const& message);
+  void logError(String const& message);
+  void logWarning(String const& message);
+  ```
+  
+  Log messages to the plugdata console.
+</ParamField>
+
+<ParamField path="getConsoleMessages" type="std::deque&">
+  ```cpp
+  std::deque<std::tuple<void*, String, int, int, int>>& getConsoleMessages() const;
+  std::deque<std::tuple<void*, String, int, int, int>>& getConsoleHistory() const;
+  ```
+  
+  Access console message queues.
+</ParamField>
+
+## Virtual Methods (Must Implement)
+
+<ParamField path="receiveSysMessage" type="virtual">
+  ```cpp
+  virtual void receiveSysMessage(SmallString const& selector, SmallArray<pd::Atom> const& list) = 0;
+  ```
+  
+  Receive system messages from Pure Data.
+</ParamField>
+
+<ParamField path="updateConsole" type="virtual">
+  ```cpp
+  virtual void updateConsole(int numMessages, bool newWarning) = 0;
+  ```
+  
+  Called when console needs updating.
+</ParamField>
+
+<ParamField path="titleChanged" type="virtual">
+  ```cpp
+  virtual void titleChanged() = 0;
+  ```
+  
+  Called when patch title changes.
+</ParamField>
+
+## Properties
+
+<ResponseField name="instance" type="void*">
+  Pointer to the underlying libpd instance.
+</ResponseField>
+
+<ResponseField name="messageReceiver" type="void*">
+  Pure Data receiver for system messages.
+</ResponseField>
+
+<ResponseField name="parameterReceiver" type="void*">
+  Pure Data receiver for parameter messages.
+</ResponseField>
+
+<ResponseField name="audioLock" type="CriticalSection const">
+  Mutex for thread-safe audio operations.
+</ResponseField>
+
+## Usage Example
+
+```cpp
+// Create and initialize instance
+class MyPdInstance : public pd::Instance {
+public:
+    void receiveNoteOn(int ch, int pitch, int vel) override {
+        DBG("Note: " + String(pitch));
+    }
+    
+    void receiveSysMessage(SmallString const& sel, SmallArray<pd::Atom> const& list) override {
+        // Handle system messages
+    }
+    
+    void updateConsole(int num, bool warn) override { }
+    void titleChanged() override { }
+    // ... implement other virtual methods
+};
+
+MyPdInstance instance;
+String pdluaVer;
+instance.initialisePd(pdluaVer);
+instance.prepareDSP(2, 2, 48000.0);
+instance.startDSP();
+
+// Load and use a patch
+auto patch = instance.openPatch(File("synth.pd"));
+instance.sendFloat("frequency", 440.0f);
+instance.sendBang("trigger");
+
+// In audio callback
+instance.performDSP(inputs, outputs);
+```
+
+## See Also
+
+- `PluginProcessor` - Inherits from pd::Instance
+- `pd::Patch` - Patch management
+- `pd::Atom` - Pure Data atom wrapper
+- `MessageListener` - Message listening interface

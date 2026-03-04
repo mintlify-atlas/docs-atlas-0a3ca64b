@@ -1,0 +1,568 @@
+---
+title: Gem Graphics
+description: Using Gem for 3D graphics and video processing in plugdata
+---
+
+Plugdata includes Gem (Graphics Environment for Multimedia), a powerful library for creating real-time 3D graphics, video processing, and visual effects in Pure Data patches.
+
+## Overview
+
+Gem provides:
+- ✅ Real-time 3D graphics rendering
+- ✅ Video playback and capture
+- ✅ Image processing and effects
+- ✅ OpenGL integration
+- ✅ Shader support (GLSL)
+- ✅ Particle systems
+- ✅ 3D model loading
+
+<Note>
+Gem is enabled by default. To disable during compilation, use `-DENABLE_GEM=0`.
+</Note>
+
+## Quick Start
+
+### Basic Rendering Chain
+
+Every Gem patch follows this structure:
+
+```pd
+[gemwin]     <- Window management
+[create(     <- Create window
+
+[gemhead]    <- Start of render chain
+|
+[color 1 0 0]   <- Red color
+|
+[cube]       <- 3D cube object
+```
+
+<Steps>
+
+### Step 1: Create Window
+
+The `[gemwin]` object controls the rendering window:
+
+```pd
+[gemwin]
+|
+[create(     <- Create window
+[destroy(    <- Destroy window
+[1(          <- Start rendering (1 = on)
+[0(          <- Stop rendering (0 = off)
+```
+
+### Step 2: Set Up Render Chain
+
+`[gemhead]` starts a rendering chain that executes every frame:
+
+```pd
+[gemhead 50]    <- Priority 50 (lower = earlier)
+|
+[rotateXYZ 1 1 0]  <- Rotate object
+|
+[cube]          <- Draw cube
+```
+
+### Step 3: Add Transformations
+
+Transformations affect all objects below them:
+
+```pd
+[gemhead]
+|
+[translate 0 2 0]   <- Move up
+|
+[rotate 45 0 1 0]   <- Rotate around Y axis
+|
+[scale 0.5 0.5 0.5] <- Scale to half size
+|
+[sphere]
+```
+
+</Steps>
+
+## Window Configuration
+
+The `[gemwin]` object accepts many configuration messages:
+
+```pd
+[dimen 800 600(     <- Set window size
+[offset 100 100(    <- Set window position  
+[fullscreen 1(      <- Toggle fullscreen
+[frame 60(          <- Set frame rate (FPS)
+[color 0.2 0.2 0.2( <- Background color (RGB)
+[FSAA 4(            <- Anti-aliasing level
+[title My Gem Window(  <- Window title
+|
+[gemwin]
+```
+
+## Gem Objects Reference
+
+### 3D Primitives
+
+Basic geometric objects:
+
+| Object | Description |
+|--------|-------------|
+| `[cube]` | 3D cube |
+| `[sphere]` | Sphere (latitude/longitude) |
+| `[cylinder]` | Cylinder |
+| `[cone]` | Cone |
+| `[torus]` | Torus (donut shape) |
+| `[teapot]` | Utah teapot |
+| `[square]` | 2D square |
+| `[circle]` | 2D circle |
+| `[triangle]` | 3D triangle |
+| `[rectangle]` | 2D rectangle |
+
+Example:
+```pd
+[gemhead]
+|
+[sphere 2]    <- Radius of 2 units
+```
+
+### Transformations
+
+Modify object position, rotation, and scale:
+
+| Object | Description |
+|--------|-------------|
+| `[translate X Y Z]` | Move object |
+| `[rotate angle X Y Z]` | Rotate around axis |
+| `[scale X Y Z]` | Scale object |
+| `[rotateXYZ Xangle Yangle Zangle]` | Rotate on all axes |
+| `[translateXYZ X Y Z]` | Alias for translate |
+| `[scaleXYZ X Y Z]` | Alias for scale |
+
+Example:
+```pd
+[gemhead]
+|
+[translate 0 0 -4]      <- Move back from camera
+|
+[rotateXYZ 30 45 0]     <- Rotate
+|
+[scale 2 1 1]           <- Stretch on X axis  
+|
+[cube]
+```
+
+### Materials and Lighting
+
+| Object | Description |
+|--------|-------------|
+| `[color R G B]` | Set object color (0-1) |
+| `[colorRGB R G B]` | Alias for color |
+| `[alpha A]` | Set transparency (0-1) |
+| `[ambient R G B]` | Ambient light color |
+| `[diffuse R G B]` | Diffuse reflection |
+| `[specular R G B]` | Specular highlights |
+| `[shininess S]` | Shininess amount |
+| `[light]` | Create light source |
+| `[world_light]` | World-space light |
+
+Example:
+```pd
+[gemhead]
+|
+[color 0 1 0]      <- Green
+|
+[alpha 0.5]        <- 50% transparent
+|
+[shininess 100]    <- Very shiny
+|
+[sphere]
+```
+
+### Camera Control
+
+```pd
+[gemhead]
+|
+[camera 0 0 4 0 0 0]   <- Position (XYZ), Look-at (XYZ)
+```
+
+Or use perspective:
+```pd
+[ortho]              <- Orthographic projection
+[GEMgluPerspective 60 1.33 0.1 100]  <- FOV, aspect, near, far
+```
+
+## Textures and Images
+
+### Load and Display Image
+
+```pd
+[gemhead]
+|
+[pix_image image.jpg]   <- Load image file
+|
+[pix_texture]           <- Convert to texture
+|
+[square 4]              <- Draw textured square
+```
+
+### Supported Image Formats
+
+- JPEG (.jpg, .jpeg)
+- PNG (.png)
+- BMP (.bmp)
+- WebP (.webp)
+- TGA (.tga)
+
+### Image Processing
+
+Gem includes many image processing objects:
+
+```pd
+[gemhead]
+|
+[pix_image video.jpg]
+|
+[pix_blur 5]           <- Blur effect
+|
+[pix_contrast 1.5]     <- Increase contrast  
+|
+[pix_kaleidoscope]     <- Kaleidoscope effect
+|
+[pix_texture]
+|
+[square 4]
+```
+
+Common pix_ objects:
+- `[pix_blur]` - Gaussian blur
+- `[pix_contrast]` - Adjust contrast
+- `[pix_invert]` - Invert colors
+- `[pix_gray]` - Convert to grayscale
+- `[pix_chroma_key]` - Chroma key (green screen)
+- `[pix_kaleidoscope]` - Kaleidoscope effect
+- `[pix_normalize]` - Normalize brightness
+
+## Video Playback
+
+<Note>
+Video playback requires FFmpeg support. Enable with `-DENABLE_FFMPEG=1` (default).
+</Note>
+
+```pd
+[gemhead]
+|
+[pix_film video.mp4]  <- Load video file
+|
+[pix_texture]
+|
+[square 4]
+
+[auto 1(              <- Auto-play
+[0(                   <- Go to frame 0
+[rate 1(              <- Playback speed
+```
+
+Supported video formats (with FFmpeg):
+- MP4 (.mp4)
+- AVI (.avi)
+- MOV (.mov)
+- MKV (.mkv)
+
+## GLSL Shaders
+
+Gem supports custom GLSL shaders:
+
+### Vertex Shader
+
+```pd
+[gemhead]
+|
+[glsl_vertex]  
+|
+[program myshader.vert(
+|
+[glsl_program]
+|
+[sphere]
+```
+
+### Fragment Shader
+
+```pd
+[gemhead]
+|
+[glsl_fragment]
+|
+[program myshader.frag(
+|
+[glsl_program]
+|
+[sphere]
+```
+
+### Complete Shader Example
+
+```pd
+[gemhead]
+|
+[glsl_vertex]
+|
+[program ripple.vert(
+|
+[glsl_fragment] 
+|
+[program ripple.frag(
+|
+[glsl_program]
+|
+[square 4]
+```
+
+Example fragment shader (`ripple.frag`):
+```glsl
+uniform float time;
+varying vec2 texcoord;
+
+void main() {
+    vec2 p = texcoord * 2.0 - 1.0;
+    float r = length(p);
+    float angle = atan(p.y, p.x);
+    
+    float ripple = sin(r * 10.0 - time * 2.0) * 0.5 + 0.5;
+    
+    vec3 color = vec3(ripple);
+    gl_FragColor = vec4(color, 1.0);
+}
+```
+
+## 3D Model Loading
+
+Load external 3D models:
+
+```pd
+[gemhead]
+|
+[model model.obj]   <- Load OBJ file
+|
+[rotateXYZ 0 1 0]
+```
+
+Supported formats:
+- Wavefront OBJ (.obj)
+- Various formats via ASSIMP library
+
+## Particle Systems
+
+Create particle effects:
+
+```pd
+[gemhead]
+|
+[part_head 1000]        <- Max 1000 particles
+|
+[part_source]           <- Emit particles
+|
+[part_velocity 0 1 0]   <- Upward velocity
+|
+[part_gravity 0 -0.1 0] <- Gravity
+|
+[part_render]           <- Draw particles
+```
+
+## Multiple Render Chains
+
+Use `[separator]` to create independent chains:
+
+```pd
+[gemhead]
+|
+[separator]  <- Start isolated chain
+|
+[translate -2 0 0]
+|
+[color 1 0 0]
+|
+[sphere]
+
+[gemhead]
+|
+[separator]  <- Another isolated chain  
+|
+[translate 2 0 0]
+|
+[color 0 0 1]
+|
+[sphere]
+```
+
+## Animation Techniques
+
+### Using [gemhead] Bang
+
+```pd
+[gemhead]
+|
+[t a b]  <- Split gemlist and bang
+|    |
+|    [f]     <- Frame counter
+|    |  \
+|    |   [+ 1]
+|    |   |
+|    |   |
+|    [/ 60]  <- Convert to seconds (at 60 FPS)
+|    |
+|    [* 360] <- Convert to degrees
+|    |
+[rotateXYZ]  <- Rotate continuously
+|
+[cube]
+```
+
+### External Control
+
+```pd
+[metro 33]     <- 30 FPS control
+|
+[f]
+|\
+| [+ 1]
+|
+[gemhead 50]   <- Priority 50
+|
+[rotateXYZ]
+|
+[cube]
+```
+
+## Practical Examples
+
+### Rotating Textured Cube
+
+```pd
+# Window setup
+[create, frame 60, dimen 800 600(
+|
+[gemwin]
+
+# Render chain
+[gemhead]
+|
+[t a b]
+|    |
+|    [f]    
+|    |  \
+|    |   [+ 1]
+|    |   |
+|    [/ 60]
+|    |
+[rotateXYZ]
+|
+[pix_image logo.png]
+|
+[pix_texture]
+|
+[cube 2]
+```
+
+### Multi-Object Scene
+
+```pd
+[create, frame 60(
+|
+[gemwin]
+
+[gemhead 10]  <- Background
+|
+[color 0.1 0.1 0.2]
+
+[gemhead 20]  <- Light
+|
+[world_light]
+
+[gemhead 50]  <- Sphere
+|
+[translate -2 0 -5]
+|
+[color 1 0 0]
+|
+[sphere 1]
+
+[gemhead 50]  <- Cube
+|
+[translate 2 0 -5]
+|
+[color 0 0 1]
+|
+[cube 1]
+```
+
+## Performance Tips
+
+1. **Use appropriate frame rates**: Higher FPS = more CPU usage
+   ```pd
+   [frame 30(  <- Good for most use cases
+   ```
+
+2. **Limit particle counts**: Start with low numbers and increase as needed
+   ```pd
+   [part_head 100]  <- Start small
+   ```
+
+3. **Optimize image sizes**: Use power-of-2 textures (256, 512, 1024, 2048)
+
+4. **Use `[separator]` wisely**: Only when you need isolated transformations
+
+5. **Disable unused features**:
+   ```pd
+   [lighting 0(  <- Disable lighting if not needed
+   ```
+
+## Common Issues
+
+### Window Won't Create
+
+```pd
+GEM: Could not create window
+```
+
+**Solution:** Check graphics drivers and OpenGL support.
+
+### Black Screen
+
+**Solution:** Verify:
+- `[gemhead]` is receiving bangs (connect to `[print]`)
+- Objects are visible (not behind camera)
+- Lighting is appropriate
+
+### Poor Performance
+
+**Solution:**
+- Lower frame rate: `[frame 30(`
+- Reduce particle counts
+- Optimize image/video resolution
+- Check CPU/GPU usage
+
+## Code References
+
+- Gem setup: Source/Pd/Setup.cpp:163-702, 1831-2068
+- Gem initialization: Source/Pd/Setup.cpp:1831
+- CMake Gem option: CMakeLists.txt:35, 340-343
+- Gem documentation: Resources/Documentation/Gem/
+
+## Learning Resources
+
+- Gem documentation files: Resources/Documentation/Gem/
+- `[gemhead]` reference: Resources/Documentation/Gem/gemhead.md
+- `[gemwin]` reference: Resources/Documentation/Gem/gemwin.md
+- Over 400 Gem objects documented in Resources/Documentation/Gem/
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Performance Optimization" icon="gauge-high" href="/advanced/performance-optimization">
+    Optimize Gem rendering performance
+  </Card>
+  <Card title="Lua Scripting" icon="code" href="/advanced/lua-scripting">
+    Control Gem with Lua scripts
+  </Card>
+</CardGroup>

@@ -1,0 +1,135 @@
+---
+title: Frequently Asked Questions
+description: Common questions about plugdata
+---
+
+Answers to frequently asked questions about plugdata.
+
+## General Questions
+
+<Accordion title="What's the difference between plugdata and Pure Data?">
+  plugdata is a plugin wrapper for Pure Data that allows you to use Pure Data patches inside digital audio workstations (DAWs) as VST3, AU, LV2, or CLAP plugins. Key differences:
+
+  - **New GUI**: plugdata features a modern interface built with JUCE, offering an improved patching experience
+  - **DAW integration**: Use Pure Data patches as instruments or effects in your favorite DAW
+  - **Standalone mode**: Can also be used as a standalone replacement for vanilla Pure Data
+  - **ELSE collection**: Ships with the ELSE collection of externals and abstractions by default
+  - **Multiple formats**: Available as VST3, AU (macOS), LV2 (Linux), CLAP, and standalone application
+
+  Despite these differences, plugdata maintains compatibility with Pure Data patches and aims to provide the same functionality as vanilla Pd.
+</Accordion>
+
+<Accordion title="Can I use Max/MSP patches in plugdata?">
+  No, plugdata cannot directly load Max/MSP patches. However:
+
+  - **Cyclone library**: plugdata includes the Cyclone library, which provides Max/MSP-compatible objects to ease the transition for Max users
+  - **ELSE alternatives**: The ELSE library contains many alternatives to Max objects and even covers some objects not cloned in Cyclone
+  - **Manual conversion**: You can manually recreate Max patches in Pure Data/plugdata using equivalent objects
+
+  While direct compatibility isn't available, the included libraries make it easier for Max users to work in plugdata.
+</Accordion>
+
+<Accordion title="Which plugin format should I use?">
+  The best plugin format depends on your DAW and operating system:
+
+  - **VST3**: The most widely supported format across Windows, macOS, and Linux. Recommended for most users.
+  - **AU (Audio Units)**: macOS only. Use if your DAW is AU-only (like older versions of Logic Pro).
+  - **LV2**: Linux only. Common in open-source DAWs like Ardour, Qtractor, and REAPER on Linux.
+  - **CLAP**: A newer, modern plugin format with good performance. Supported by REAPER, Bitwig, and other modern DAWs.
+
+  Most modern DAWs support multiple formats. VST3 is generally the safest choice. You can install multiple formats and let your DAW choose.
+</Accordion>
+
+<Accordion title="How do I install externals?">
+  plugdata handles externals differently depending on how you're using it:
+
+  **Standalone version**:
+  - Many externals can be loaded like in vanilla Pure Data
+  - The ELSE collection is included by default
+  - You can add paths to external libraries in the preferences
+
+  **Plugin version**:
+  - Externals must be compiled along with plugdata
+  - The ELSE and Cyclone collections are built-in
+  - To add custom externals, you need to recompile plugdata with your externals included
+  - See the "Adding your own externals" section in the [README](https://github.com/plugdata-team/plugdata) for compilation instructions
+
+  This difference exists because plugins need to be self-contained for security and compatibility reasons.
+</Accordion>
+
+<Accordion title="Is plugdata compatible with vanilla Pd patches?">
+  Yes, plugdata aims for full compatibility with vanilla Pure Data patches. You should be able to:
+
+  - Open and run patches created in vanilla Pd
+  - Use all vanilla Pd objects
+  - Work with abstractions and subpatches
+  - Load patches created in plugdata back into vanilla Pd
+
+  Some visual differences may exist due to the different GUI, but the functionality should be identical. If you encounter compatibility issues, please report them on [GitHub](https://github.com/plugdata-team/plugdata/issues).
+</Accordion>
+
+<Accordion title="Can I use plugdata in multiple DAWs?">
+  Yes, once installed, plugdata can be used in any DAW that supports the installed plugin format(s). You can:
+
+  - Install multiple plugin formats (VST3, AU, LV2, CLAP) simultaneously
+  - Use the same patches across different DAWs
+  - Switch between DAWs without any changes to your patches
+
+  Your patches are stored as separate files and can be loaded in any instance of plugdata, regardless of which DAW you're using.
+</Accordion>
+
+<Accordion title="What's the performance overhead compared to native plugins?">
+  plugdata is designed to be efficient, but performance depends on your patch complexity:
+
+  - **Well-optimized patches**: Can perform similarly to native plugins
+  - **Complex patches**: May use more CPU than equivalent native code
+  - **DSP efficiency**: Pure Data's DSP is highly optimized and has been refined over decades
+  - **GUI overhead**: The JUCE-based GUI adds some overhead, but this is minimal when the editor is closed
+
+  Tips for best performance:
+  - Close the plugin editor when not actively patching
+  - Increase buffer size if you don't need ultra-low latency
+  - Optimize patches using techniques from the [Troubleshooting](/resources/troubleshooting) guide
+  - Use `[block~]` for efficient processing in certain scenarios
+</Accordion>
+
+<Accordion title="Does plugdata support Gem or other video externals?">
+  plugdata includes support for Gem objects, though this can be disabled during compilation:
+
+  - Gem objects are included by default in standard builds
+  - The `-DENABLE_GEM=0` build flag can disable Gem if not needed
+  - Video performance may vary depending on your system
+
+  Other video externals would need to be compiled along with plugdata for plugin versions.
+</Accordion>
+
+<Accordion title="Is plugdata free and open source?">
+  Yes, plugdata is free and open source:
+
+  - **License**: The plugdata source code is licensed under GPL-3.0
+  - **JUCE framework**: The compiled application uses JUCE, which is licensed under AGPL-3.0
+  - **No cost**: plugdata is completely free to download, use, and distribute
+  - **Open development**: Source code is available on [GitHub](https://github.com/plugdata-team/plugdata)
+  - **Community-driven**: Development is supported by contributors and the community
+
+  You can use plugdata for personal, educational, and commercial projects at no cost.
+</Accordion>
+
+<Accordion title="Can I save presets in plugdata?">
+  Yes, plugdata supports saving and loading presets through your DAW's preset management system. The exact method depends on your DAW, but generally:
+
+  - Plugin state is saved with your DAW project
+  - Most DAWs allow saving and loading individual plugin presets
+  - Parameter automation is supported
+  - You can also save patches as separate `.pd` files for reuse
+</Accordion>
+
+## Still Have Questions?
+
+If your question isn't answered here:
+
+- **Check the Discord**: Join the [plugdata Discord server](https://discord.gg/eT2RxdF9Nq) to ask questions
+- **Search GitHub Discussions**: Browse [GitHub Discussions](https://github.com/plugdata-team/plugdata/discussions) for more Q&A
+- **Consult Pure Data resources**: Since plugdata is based on Pure Data, many Pd resources apply to plugdata as well
+
+See the [Community](/resources/community) page for more resources.

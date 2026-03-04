@@ -1,0 +1,474 @@
+---
+title: "Installation"
+description: "Install plugdata on Windows, macOS, Linux, or iOS with our comprehensive installation guide"
+---
+
+## System Requirements
+
+Before installing plugdata, ensure your system meets these minimum requirements:
+
+### Windows
+- Windows 10 or later
+- x64 processor
+- VST3, LV2, or CLAP compatible DAW (for plugin use)
+
+### macOS
+- macOS 10.15 Catalina or later (standard builds)
+- macOS 10.11 El Capitan or later (legacy builds)
+- Intel or Apple Silicon (M1/M2/M3) processor
+- AU, VST3, LV2, or CLAP compatible DAW (for plugin use)
+
+### Linux
+- Modern Linux distribution (Ubuntu 20.04+, Fedora 35+, Arch, etc.)
+- x64 processor
+- VST3, LV2, or CLAP compatible DAW (for plugin use)
+- JACK, ALSA, or PulseAudio for audio
+
+<Note>
+Linux users need JUCE framework dependencies installed. See the [Linux Dependencies](#linux-dependencies) section below.
+</Note>
+
+### iOS
+- iOS 12.0 or later
+- AUv3 compatible host application
+- iPad or iPhone
+
+## Installation Methods
+
+<Tabs>
+<Tab title="Windows">
+
+### Windows Installation
+
+<Steps>
+
+<Step title="Download the installer">
+Visit the [official releases page](https://github.com/plugdata-team/plugdata/releases/latest) and download the Windows installer (`.exe` file) for the latest stable version.
+
+<Tip>
+For experimental/beta features, you can download recent builds from the [plugdata website](https://plugdata.org/download.html).
+</Tip>
+</Step>
+
+<Step title="Run the installer">
+Double-click the downloaded installer and follow the installation wizard. The installer will:
+
+- Install the plugdata standalone application to `C:\Program Files\plugdata\`
+- Install VST3 plugins to `C:\Program Files\Common Files\VST3\`
+- Install LV2 plugins to `C:\Program Files\Common Files\LV2\`
+- Install CLAP plugins to `C:\Program Files\Common Files\CLAP\`
+- Create Start Menu shortcuts
+</Step>
+
+<Step title="Launch plugdata">
+You can now launch plugdata from:
+
+- Start Menu → plugdata
+- Desktop shortcut (if created during installation)
+- Or load it as a plugin in your DAW
+</Step>
+
+</Steps>
+
+### Plugin Locations
+
+After installation, plugins will be available at:
+
+```
+VST3: C:\Program Files\Common Files\VST3\plugdata.vst3
+VST3: C:\Program Files\Common Files\VST3\plugdata-fx.vst3
+LV2:  C:\Program Files\Common Files\LV2\plugdata.lv2
+LV2:  C:\Program Files\Common Files\LV2\plugdata-fx.lv2
+CLAP: C:\Program Files\Common Files\CLAP\plugdata.clap
+CLAP: C:\Program Files\Common Files\CLAP\plugdata-fx.clap
+```
+
+</Tab>
+
+<Tab title="macOS">
+
+### macOS Installation
+
+<Steps>
+
+<Step title="Choose your installation method">
+
+#### Option 1: Official Installer (Recommended)
+
+Download the macOS installer (`.dmg` file) from the [official releases page](https://github.com/plugdata-team/plugdata/releases/latest).
+
+#### Option 2: Homebrew Cask
+
+Install using Homebrew (may not always be the latest version):
+
+```bash
+brew install --cask plugdata
+```
+
+<Warning>
+The Homebrew cask is maintained by the community and may lag behind official releases.
+</Warning>
+
+</Step>
+
+<Step title="Install from DMG" if="using official installer">
+
+1. Open the downloaded `.dmg` file
+2. Drag the plugdata application to your Applications folder
+3. The installer will also copy plugins to their standard locations
+4. Eject the DMG when complete
+
+</Step>
+
+<Step title="First launch - Security">
+
+On first launch, macOS may block the application because it's not from the App Store:
+
+1. Go to System Preferences → Security & Privacy
+2. Click "Open Anyway" for plugdata
+3. Confirm you want to open the application
+
+Alternatively, right-click the application and select "Open" to bypass Gatekeeper.
+
+</Step>
+
+<Step title="Grant permissions">
+
+plugidata may request permissions for:
+
+- **Microphone**: For audio input functionality
+- **Camera**: For video processing with Gem objects (optional)
+- **Local Network**: For network communication features
+
+Grant these permissions based on your intended use.
+
+</Step>
+
+</Steps>
+
+### Plugin Locations
+
+Plugins are installed to standard macOS locations:
+
+```
+AU:   /Library/Audio/Plug-ins/Components/plugdata.component
+AU:   /Library/Audio/Plug-ins/Components/plugdata-fx.component
+AU:   /Library/Audio/Plug-ins/Components/plugdata-midi.component
+VST3: /Library/Audio/Plug-ins/VST3/plugdata.vst3
+VST3: /Library/Audio/Plug-ins/VST3/plugdata-fx.vst3
+LV2:  /Library/Audio/Plug-ins/LV2/plugdata.lv2
+LV2:  /Library/Audio/Plug-ins/LV2/plugdata-fx.lv2
+CLAP: /Library/Audio/Plug-ins/CLAP/plugdata.clap
+CLAP: /Library/Audio/Plug-ins/CLAP/plugdata-fx.clap
+```
+
+### Apple Silicon vs Intel
+
+Standard builds are **Universal binaries** containing both Apple Silicon and Intel code. The correct version runs automatically based on your processor.
+
+</Tab>
+
+<Tab title="Linux">
+
+### Linux Installation
+
+<Steps>
+
+<Step title="Install system dependencies">
+
+First, install required JUCE framework dependencies for your distribution:
+
+#### Ubuntu/Debian
+
+```bash
+sudo apt-get update
+sudo apt-get install libasound2-dev libcurl4-openssl-dev libfreetype6-dev \
+  libx11-dev libxcomposite-dev libxcursor-dev libxinerama-dev libxrandr-dev \
+  libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev
+```
+
+#### Fedora
+
+```bash
+sudo dnf install alsa-lib-devel freetype-devel libX11-devel \
+  libXcomposite-devel libXcursor-devel libXinerama-devel libXrandr-devel \
+  libXrender-devel webkit2gtk3-devel mesa-libGLU-devel
+```
+
+#### Arch Linux
+
+```bash
+sudo pacman -S alsa-lib freetype2 libx11 libxcomposite libxcursor \
+  libxinerama libxrandr libxrender webkit2gtk glu
+```
+
+</Step>
+
+<Step title="Choose your installation method">
+
+#### Option 1: OBS Repository (Recommended)
+
+The OBS (Open Build Service) provides packages for multiple distributions:
+
+1. Visit the [OBS plugdata page](https://software.opensuse.org//download.html?project=home%3Aplugdata&package=plugdata)
+2. Select your distribution
+3. Follow the distribution-specific instructions to add the repository
+4. Install packages:
+
+**Standalone:**
+```bash
+sudo apt install plugdata          # Debian/Ubuntu
+sudo dnf install plugdata          # Fedora
+sudo zypper install plugdata       # openSUSE
+```
+
+**VST3 Plugin:**
+```bash
+sudo apt install plugdata-vst3     # Debian/Ubuntu
+sudo dnf install vst3-plugdata     # Fedora/RPM distros
+```
+
+**LV2 Plugin:**
+```bash
+sudo apt install plugdata-lv2      # Debian/Ubuntu  
+sudo dnf install lv2-plugdata      # Fedora/RPM distros
+```
+
+<Note>
+Package names vary between Debian-based and RPM-based distributions. Check the OBS page for your specific distribution.
+</Note>
+
+#### Option 2: Arch User Repository (AUR)
+
+Arch users can install from AUR:
+
+**Stable release:**
+```bash
+yay -S plugdata-bin
+# or
+paru -S plugdata-bin
+```
+
+**Latest experimental build:**
+```bash
+yay -S plugdata-git
+# or  
+paru -S plugdata-git
+```
+
+#### Option 3: Official Release Binaries
+
+Download the Linux binaries from the [official releases page](https://github.com/plugdata-team/plugdata/releases/latest):
+
+1. Download the `.tar.gz` or `.zip` archive
+2. Extract the archive
+3. Run the standalone: `./plugdata`
+4. Or copy plugins to appropriate directories (see below)
+
+</Step>
+
+<Step title="Manual plugin installation (if using binaries)">
+
+If you downloaded binaries manually, copy plugins to:
+
+```bash
+# VST3 plugins
+mkdir -p ~/.vst3
+cp -r plugdata.vst3 ~/.vst3/
+cp -r plugdata-fx.vst3 ~/.vst3/
+
+# LV2 plugins
+mkdir -p ~/.lv2
+cp -r plugdata.lv2 ~/.lv2/
+cp -r plugdata-fx.lv2 ~/.lv2/
+
+# CLAP plugins
+mkdir -p ~/.clap
+cp plugdata.clap ~/.clap/
+cp plugdata-fx.clap ~/.clap/
+```
+
+</Step>
+
+</Steps>
+
+### Linux Dependencies
+
+For audio I/O, plugdata supports:
+
+- **JACK** (recommended for pro audio)
+- **ALSA** (direct hardware access)
+- **PulseAudio** (general desktop audio)
+
+Make sure at least one of these is installed and configured.
+
+</Tab>
+
+<Tab title="iOS">
+
+### iOS Installation
+
+<Steps>
+
+<Step title="Download from the App Store">
+
+While plugdata can be sideloaded, the easiest method is downloading from the iOS App Store (if available) or through TestFlight for beta versions.
+
+Alternatively, download the `.ipa` file from the releases page for sideloading.
+
+</Step>
+
+<Step title="Install AUv3 plugins">
+
+The iOS version includes:
+
+- **plugdata standalone app** with document browser
+- **plugdata-instrument AUv3** plugin
+- **plugdata-fx AUv3** plugin
+
+After installation, the AUv3 plugins will be available in compatible hosts like:
+
+- GarageBand
+- Cubasis
+- AUM
+- Beatmaker
+- And other AUv3-compatible DAWs
+
+</Step>
+
+<Step title="Grant permissions">
+
+iOS will request permission for:
+
+- Microphone access (for audio input)
+- Files and folders (for patch storage)
+
+Grant these to enable full functionality.
+
+</Step>
+
+</Steps>
+
+</Tab>
+</Tabs>
+
+## Verifying Installation
+
+To verify plugdata is correctly installed:
+
+### Standalone
+
+1. Launch the plugdata standalone application
+2. You should see the main interface with a blank canvas
+3. Go to **File → New** to create a patch
+4. If the interface loads correctly, installation is successful
+
+### Plugin
+
+1. Open your DAW
+2. Rescan plugins (if necessary)
+3. Look for "plugdata" or "plugdata-fx" in your plugin list
+4. Load the plugin on a track
+5. The plugdata interface should appear in a plugin window
+
+<Warning>
+If plugins don't appear in your DAW, verify they're installed in the correct location for your DAW's plugin search paths.
+</Warning>
+
+## Experimental Builds
+
+For the latest features and bug fixes between releases, you can download experimental builds from the [plugdata website](https://plugdata.org/download.html).
+
+<Warning>
+Experimental builds may contain bugs or unstable features. Use stable releases for production work.
+</Warning>
+
+## Building from Source
+
+Advanced users can build plugdata from source:
+
+<Steps>
+
+<Step title="Clone the repository">
+
+```bash
+git clone --recursive https://github.com/plugdata-team/plugdata.git
+cd plugdata
+```
+
+<Note>
+The `--recursive` flag is crucial - it initializes all required git submodules. If you forget it, run: `git submodule update --init --recursive`
+</Note>
+
+</Step>
+
+<Step title="Install build dependencies">
+
+- **CMake 3.21 or later** (3.21+ required for CLAP plugin support)
+- **C++20 compatible compiler** (GCC 10+, Clang 12+, MSVC 2019+)
+- **Python 3** (for build scripts)
+- Platform-specific dependencies:
+  - Linux: JUCE dependencies (see Linux installation section)
+  - macOS: Xcode command line tools
+  - Windows: Visual Studio 2019 or later
+
+</Step>
+
+<Step title="Configure and build">
+
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build . --config Release
+```
+
+**Specify generator (optional):**
+
+```bash
+# Unix Makefiles
+cmake -G "Unix Makefiles" ..
+
+# Xcode
+cmake -G "Xcode" ..
+
+# Visual Studio
+cmake -G "Visual Studio 17 2022" -A x64 ..
+```
+
+</Step>
+
+<Step title="Build options (optional)">
+
+Customize your build with CMake options:
+
+```bash
+# Fast build (skips Gem, sfz~, ffmpeg)
+cmake -DQUICK_BUILD=1 ..
+
+# Disable specific components
+cmake -DENABLE_GEM=0 -DENABLE_SFIZZ=0 -DENABLE_FFMPEG=0 ..
+
+# Enable performance tracing
+cmake -DENABLE_PERFETTO=1 ..
+
+# Enable testing suite
+cmake -DENABLE_TESTING=1 ..
+```
+
+</Step>
+
+<Step title="Install (optional)">
+
+```bash
+cmake --install . --config Release
+```
+
+This copies plugins to system plugin directories.
+
+</Step>
+
+</Steps>
+
+## Next Steps
+
+Now that plugdata is installed, proceed to the [Quickstart Guide](/quickstart) to create your first patch and learn the interface.

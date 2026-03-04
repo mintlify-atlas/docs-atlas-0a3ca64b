@@ -1,0 +1,104 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for plugdata
+---
+
+This guide covers common issues you might encounter when using plugdata and their solutions.
+
+## Common Issues
+
+<Accordion title="Plugin not appearing in DAW">
+  **Problem**: The plugdata plugin doesn't show up in your DAW's plugin list.
+
+  **Solutions**:
+  - **Rescan your plugin directories**: Most DAWs have a "Rescan" or "Refresh" plugin option. Try rescanning your plugin folders.
+  - **Check plugin format**: Ensure you've installed the correct plugin format for your DAW (VST3, LV2, CLAP, or AU on macOS).
+  - **Verify installation location**: Make sure the plugin is installed in a directory that your DAW is scanning:
+    - **Windows**: `C:\Program Files\Common Files\VST3\`
+    - **macOS**: `~/Library/Audio/Plug-Ins/VST3/` or `~/Library/Audio/Plug-Ins/Components/` (AU)
+    - **Linux**: `~/.vst3/` or `/usr/lib/vst3/` for VST3, `~/.lv2/` or `/usr/lib/lv2/` for LV2
+  - **Check DAW compatibility**: Verify that your DAW supports the installed plugin format.
+  - **Restart your DAW**: Sometimes a simple restart is all that's needed.
+</Accordion>
+
+<Accordion title="No audio output">
+  **Problem**: plugdata loads successfully but produces no sound.
+
+  **Solutions**:
+  - **Check DSP toggle**: Make sure DSP (Digital Signal Processing) is enabled in plugdata. Look for the DSP toggle button in the interface.
+  - **Verify audio connections**: Ensure your patch has proper audio outputs connected to `[dac~]` objects.
+  - **Check volume levels**: Verify that volume levels in your patch, the plugin, and your DAW are not at zero or muted.
+  - **Sample rate mismatch**: Ensure your patch's sample rate matches your DAW's project sample rate. Some objects may behave differently at different sample rates.
+  - **Audio driver settings**: In standalone mode, check that the correct audio driver and output device are selected in the audio settings.
+  - **Buffer size**: Try adjusting the buffer size in your audio settings. Very small buffer sizes can cause issues on some systems.
+</Accordion>
+
+<Accordion title="Crashes or instability">
+  **Problem**: plugdata crashes or behaves unpredictably.
+
+  **Solutions**:
+  - **Update audio drivers**: Outdated or incompatible audio drivers are a common cause of crashes. Update to the latest drivers for your audio interface.
+  - **Adjust buffer size**: Increase the buffer size in your audio settings to reduce CPU load and improve stability.
+  - **Check for infinite loops**: Review your patch for potential infinite loops or feedback that could cause crashes.
+  - **Disable problematic externals**: If crashes occur with specific externals, try disabling or replacing them.
+  - **Update plugdata**: Ensure you're running the latest version of plugdata from the [releases page](https://github.com/plugdata-team/plugdata/releases/latest).
+  - **Check system resources**: Monitor CPU and RAM usage. Close unnecessary applications if resources are constrained.
+  - **Report the issue**: If crashes persist, report them on [Discord](https://discord.gg/eT2RxdF9Nq) or [GitHub Issues](https://github.com/plugdata-team/plugdata/issues) with details about your system and steps to reproduce.
+</Accordion>
+
+<Accordion title="Performance issues">
+  **Problem**: High CPU usage, audio dropouts, or sluggish interface.
+
+  **Solutions**:
+  - **Increase buffer size**: Larger buffer sizes reduce CPU load but increase latency. Find a balance that works for your needs.
+  - **Optimize your patch**: Look for inefficient operations, unnecessary calculations, or objects that can be replaced with more efficient alternatives.
+  - **Reduce GUI updates**: Minimize the use of GUI objects in performance-critical patches, as they can be CPU-intensive.
+  - **Use block~ objects**: For DSP-heavy sections, consider using `[block~]` to process audio at a lower sample rate.
+  - **Disable visual effects**: Turn off unnecessary visual effects or animations in your patch.
+  - **Check for memory leaks**: Some patches may have memory leaks if arrays or buffers are continuously growing.
+  - **Close other applications**: Free up system resources by closing unnecessary programs.
+</Accordion>
+
+<Accordion title="MIDI not working">
+  **Problem**: MIDI input or output is not functioning.
+
+  **Solutions**:
+  - **Check MIDI connections**: In standalone mode, verify that the correct MIDI devices are selected in the MIDI settings.
+  - **Verify MIDI routing in DAW**: When used as a plugin, ensure your DAW is routing MIDI to the plugdata track.
+  - **Test with simple patch**: Create a simple test patch with `[notein]` and `[print]` to verify MIDI is being received.
+  - **Check MIDI channel**: Some MIDI objects filter by channel. Use `[notein]` without arguments to receive on all channels.
+  - **MIDI device conflicts**: Ensure no other application is exclusively using your MIDI device.
+  - **Update MIDI drivers**: On Windows, update your MIDI device drivers if issues persist.
+</Accordion>
+
+<Accordion title="Patches from vanilla Pd look different">
+  **Problem**: Patches created in vanilla Pure Data look different in plugdata.
+
+  **Solutions**:
+  - **Font differences**: plugdata uses a different font and rendering system. This is expected and doesn't affect functionality.
+  - **Object sizing**: Some objects may be sized differently. You can adjust object sizes manually if needed.
+  - **GUI objects**: GUI objects like sliders and toggles may appear different but function the same way.
+  - **Compatibility mode**: plugdata aims for maximum compatibility with vanilla Pd, so patches should work identically despite visual differences.
+  - **Report inconsistencies**: If you find functional differences (not just visual), report them on [GitHub](https://github.com/plugdata-team/plugdata/issues).
+</Accordion>
+
+<Accordion title="Externals not loading">
+  **Problem**: External objects or abstractions fail to load.
+
+  **Solutions**:
+  - **ELSE collection**: plugdata ships with the ELSE collection by default. Most ELSE objects should work out of the box.
+  - **Check object name**: Ensure you're using the correct object name and spelling.
+  - **Path settings**: Verify that paths to external libraries are correctly set in the preferences.
+  - **Recompile with externals**: For plugin versions, externals must be compiled along with plugdata. See the [README](https://github.com/plugdata-team/plugdata) for instructions on adding custom externals.
+  - **Standalone vs plugin**: Note that the standalone version may support externals differently than the plugin version.
+</Accordion>
+
+## Getting More Help
+
+If you're still experiencing issues:
+
+- **Join the Discord**: Get real-time help from the community on [Discord](https://discord.gg/eT2RxdF9Nq)
+- **Search GitHub Issues**: Check if your issue has been reported at [github.com/plugdata-team/plugdata/issues](https://github.com/plugdata-team/plugdata/issues)
+- **Report bugs**: Create a detailed bug report with your system info, steps to reproduce, and any error messages
+
+See the [Community](/resources/community) page for more ways to get help.

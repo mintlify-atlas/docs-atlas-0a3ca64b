@@ -1,0 +1,321 @@
+---
+title: Building from Source
+description: Complete guide to compiling plugdata from source code
+---
+
+This guide covers building plugdata from source on all supported platforms. Building from source allows you to customize the build, add your own externals, or contribute to development.
+
+## Prerequisites
+
+### Required Tools
+
+- **CMake 3.21 or later** (required for CLAP plugin support)
+- **Git** with submodule support
+- **Python 3** interpreter
+- Platform-specific build tools:
+  - **macOS**: Xcode or Xcode Command Line Tools
+  - **Windows**: Visual Studio 2019 or 2022
+  - **Linux**: GCC or Clang, Make
+
+### Linux Dependencies
+
+<Warning>
+On Linux, JUCE framework requires specific system dependencies. You must install these before building.
+</Warning>
+
+Refer to the [JUCE Linux Dependencies](https://github.com/juce-framework/JUCE/blob/master/docs/Linux%20Dependencies.md) documentation and use the **full command** to install all required packages.
+
+Typical dependencies include:
+- `libasound2-dev`
+- `libx11-dev`
+- `libxrandr-dev`
+- `libxinerama-dev`
+- `libxcursor-dev`
+- `libfreetype6-dev`
+- `libwebkit2gtk-4.0-dev`
+- `libglu1-mesa-dev`
+
+## Clone the Repository
+
+<Steps>
+
+### Step 1: Clone with Submodules
+
+The `--recursive` flag is **essential** as plugdata depends on multiple git submodules:
+
+```bash
+git clone --recursive https://github.com/plugdata-team/plugdata.git
+cd plugdata
+```
+
+### Step 2: Initialize Submodules (if already cloned)
+
+If you cloned without `--recursive`, initialize submodules manually:
+
+```bash
+git submodule update --init --recursive
+```
+
+</Steps>
+
+## Build Configuration
+
+### Basic Build
+
+<Steps>
+
+### Step 1: Create Build Directory
+
+```bash
+mkdir build
+cd build
+```
+
+### Step 2: Configure with CMake
+
+Choose your generator based on platform:
+
+<CodeGroup>
+
+```bash Unix Makefiles
+cmake .. -G"Unix Makefiles"
+```
+
+```bash Xcode (macOS)
+cmake .. -G"Xcode"
+```
+
+```bash Visual Studio 2022
+cmake .. -G"Visual Studio 17 2022" -A x64
+```
+
+```bash Visual Studio 2019
+cmake .. -G"Visual Studio 16 2019" -A x64
+```
+
+</CodeGroup>
+
+### Step 3: Build
+
+```bash
+cmake --build .
+```
+
+For faster builds on multi-core systems:
+
+```bash
+cmake --build . -j8
+```
+
+</Steps>
+
+## CMake Build Options
+
+Customize your build with CMake options using `-D<OPTION>=<VALUE>`:
+
+### Performance Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `QUICK_BUILD` | `OFF` | Skip slow-to-compile features (Gem, sfizz, ffmpeg) for faster iteration |
+| `CMAKE_BUILD_TYPE` | `Release` | Build type: `Release`, `Debug`, `RelWithDebInfo` |
+
+### Feature Toggles
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `ENABLE_GEM` | `ON` | Enable Gem graphics and video library |
+| `ENABLE_SFIZZ` | `ON` | Enable sfizz library for `[sfz~]` object |
+| `ENABLE_FFMPEG` | `ON` | Enable FFmpeg for audio/video file playback |
+| `ENABLE_PERFETTO` | `OFF` | Enable Perfetto performance profiling (advanced) |
+| `ENABLE_TESTING` | `OFF` | Enable end-to-end test suite |
+
+### Advanced Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `ENABLE_ASAN` | `OFF` | Enable AddressSanitizer for debugging memory issues |
+| `ENABLE_WAYLAND` | `OFF` | Enable native Wayland support (Linux, experimental) |
+| `MACOS_LEGACY` | `OFF` | Support older macOS versions (10.11+, x86_64 only) |
+
+### Example Configurations
+
+<CodeGroup>
+
+```bash Quick Development Build
+cmake .. -DQUICK_BUILD=1 -DCMAKE_BUILD_TYPE=Debug
+```
+
+```bash Minimal Build
+cmake .. -DENABLE_GEM=0 -DENABLE_SFIZZ=0 -DENABLE_FFMPEG=0
+```
+
+```bash Full Featured Build
+cmake .. -DENABLE_GEM=1 -DENABLE_SFIZZ=1 -DENABLE_FFMPEG=1
+```
+
+```bash Performance Profiling
+cmake .. -DENABLE_PERFETTO=1 -DCMAKE_BUILD_TYPE=Release
+```
+
+</CodeGroup>
+
+## Performance Profiling with Perfetto
+
+Perfetto provides detailed performance analysis of DSP and UI operations.
+
+<Steps>
+
+### Step 1: Enable Perfetto
+
+```bash
+cmake .. -DENABLE_PERFETTO=1 -DCMAKE_BUILD_TYPE=Release
+```
+
+<Note>
+Always profile in `Release` mode for accurate performance measurements.
+</Note>
+
+### Step 2: Instrument Code
+
+Add tracing to functions you want to profile:
+
+```cpp Source/MyFile.cpp
+void myProcessingFunction() {
+    TRACE_COMPONENT();  // Automatically traces this function
+    // ... your code ...
+}
+```
+
+### Step 3: Automated Instrumentation
+
+Use the Python script to automatically add trace points:
+
+```bash
+python3 Resources/Scripts/add_perfetto_tracepoints.py Source/**/*.cpp
+```
+
+<Warning>
+Requires `llvm >= 19.1.3` and compatible `libclang` Python package.
+</Warning>
+
+### Step 4: Analyze Results
+
+Open traces at [ui.perfetto.dev](https://ui.perfetto.dev) or follow the [Melatonin Perfetto guide](https://melatonin.dev/blog/using-perfetto-with-juce-for-dsp-and-ui-performance-tuning/).
+
+</Steps>
+
+## Platform-Specific Notes
+
+### macOS
+
+**Deployment Targets:**
+- Standard: macOS 10.15+ (Universal Binary: arm64 + x86_64)
+- Legacy: macOS 10.11+ (x86_64 only) with `MACOS_LEGACY=ON`
+- iOS: iOS 12.0+
+
+**Metal Rendering:**
+Metal is enabled by default on macOS for better performance. Use `NANOVG_METAL_IMPLEMENTATION=OFF` to disable.
+
+### Windows
+
+**Visual Studio:**
+- Tested with VS 2019 and VS 2022
+- Use x64 architecture: `-A x64`
+- ASIO support is automatically included
+
+**Runtime Library:**
+Uses static runtime linking: `MultiThreaded[Debug]`
+
+### Linux
+
+**Audio Backends:**
+- ALSA (enabled by default)
+- JACK (enabled by default)
+
+**Wayland Support (Experimental):**
+```bash
+cmake .. -DENABLE_WAYLAND=1
+```
+
+Requires: `wayland-client`, `wayland-cursor`, `xkbcommon`, `libdecor-0`, `egl`
+
+### BSD
+
+<Note>
+On BSD systems, Gem and sfizz are automatically disabled due to compatibility issues.
+</Note>
+
+## Build Outputs
+
+After building, plugins and standalone app are located in:
+
+```
+Plugins/
+├── Standalone/
+│   └── plugdata          # Standalone application
+├── VST3/
+│   ├── plugdata.vst3     # Instrument plugin
+│   └── plugdata-fx.vst3  # Effect plugin
+├── AU/                   # macOS only
+│   ├── plugdata.component
+│   ├── plugdata-fx.component
+│   └── plugdata-midi.component
+├── LV2/
+│   ├── plugdata.lv2
+│   └── plugdata-fx.lv2
+└── CLAP/
+    ├── plugdata.clap
+    └── plugdata-fx.clap
+```
+
+## Installing
+
+To install system-wide:
+
+```bash
+sudo cmake --install .
+```
+
+Platform-specific install locations are configured in CMakeLists.txt (lines 887-932).
+
+## Troubleshooting
+
+### CMake Version Too Old
+
+```
+Warning: Building CLAP plugins requires at least cmake 3.21
+```
+
+**Solution:** Update CMake or disable CLAP builds (VST3/AU/LV2 still work).
+
+### Submodules Not Initialized
+
+```
+Error: Missing required dependencies
+```
+
+**Solution:** Run `git submodule update --init --recursive`
+
+### Python Not Found
+
+```
+FATAL_ERROR: Python3 not found - required for build scripts
+```
+
+**Solution:** Install Python 3 and ensure it's in your PATH.
+
+### Linux Missing Dependencies
+
+**Solution:** Install all JUCE dependencies as listed in the Linux Dependencies documentation.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Adding Externals" icon="puzzle-piece" href="/advanced/adding-externals">
+    Learn how to add custom Pure Data externals
+  </Card>
+  <Card title="Performance Optimization" icon="gauge-high" href="/advanced/performance-optimization">
+    Optimize your patches for better performance
+  </Card>
+</CardGroup>

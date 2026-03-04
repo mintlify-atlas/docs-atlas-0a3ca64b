@@ -1,0 +1,537 @@
+---
+title: Presets and Settings
+description: Learn how to save and load patches, manage presets, and configure plugdata application settings for both plugin and standalone modes
+---
+
+# Presets and Settings
+
+This guide covers everything you need to know about saving patches, managing presets, and configuring plugdata to work the way you want.
+
+## Saving and Loading Patches
+
+### Saving Patches
+
+<Tabs>
+  <Tab title="Save">
+    Save the current patch to its existing location:
+    
+    - Press **Cmd/Ctrl+S**
+    - Or select **File > Save**
+    
+    If the patch hasn't been saved before, you'll be prompted to choose a location.
+  </Tab>
+  
+  <Tab title="Save As">
+    Save a copy with a new name or location:
+    
+    - Press **Cmd/Ctrl+Shift+S**
+    - Or select **File > Save As...**
+    - Choose location and filename
+    - Original file remains unchanged
+  </Tab>
+  
+  <Tab title="Auto-save">
+    Plugdata automatically saves recovery files:
+    
+    - Enabled by default
+    - Saves every few minutes
+    - Recovery files stored in temp directory
+    - Restored on crash or unexpected exit
+  </Tab>
+</Tabs>
+
+### Loading Patches
+
+<Steps>
+  <Step title="Open File">
+    Press **Cmd/Ctrl+O** or select **File > Open**
+  </Step>
+  
+  <Step title="Browse to Patch">
+    Navigate to your .pd file
+  </Step>
+  
+  <Step title="Open in New Tab">
+    The patch opens in a new tab (or replaces empty untitled patch)
+  </Step>
+</Steps>
+
+**Recent Files:**
+Access recently opened patches from the Home panel or **File > Open Recent**
+
+### File Format Notes
+
+**Pure Data files (.pd):**
+- Text-based format
+- Fully compatible with vanilla Pd and Pd-Extended
+- Can be edited in text editor (advanced)
+- Version control friendly
+
+**Abstractions:**
+- Saved as separate .pd files
+- Referenced by name in parent patches
+- Must be in search path or same directory
+
+<Warning>
+Don't rename .pd files used as abstractions without updating references in parent patches.
+</Warning>
+
+## Managing Presets
+
+### Plugin Presets (DAW Mode)
+
+When running as a plugin, presets are managed by your DAW:
+
+<Steps>
+  <Step title="Create Preset">
+    Use your DAW's preset save function:
+    - Saves all parameter values
+    - Saves current patch state
+    - Stored in DAW preset format
+  </Step>
+  
+  <Step title="Recall Preset">
+    Load presets through DAW interface:
+    - All parameters restored
+    - Automation data remains separate
+  </Step>
+  
+  <Step title="Share Presets">
+    Export using DAW's preset sharing features
+  </Step>
+</Steps>
+
+**What's Saved:**
+- All `[param]` parameter values
+- GUI object states (number boxes, sliders, etc.)
+- Array contents (if marked to save)
+- Current patch selection (if saved with project)
+
+**What's NOT Saved:**
+- Temporary states (metro running, etc.)
+- Audio buffer contents
+- Network connections
+- MIDI controller mappings (DAW-dependent)
+
+### Standalone Presets
+
+In standalone mode, manage presets manually:
+
+```pd
+# Save state to file
+[write my-preset.txt(
+  |
+[textfile]
+
+# Load state from file  
+[read my-preset.txt(
+  |
+[textfile]
+```
+
+Or use state-saving abstractions:
+- `[preset]` object for snapshots
+- `[state]` from ELSE library
+- Custom save/load systems
+
+<Tip>
+Create a preset management subpatch to handle save/load operations for your entire patch.
+</Tip>
+
+## Application Settings
+
+Configure plugdata to match your workflow:
+
+### Accessing Settings
+
+<Steps>
+  <Step title="Open Settings">
+    Press **Cmd/Ctrl+,** or select **File > Settings**
+  </Step>
+  
+  <Step title="Choose Category">
+    Click categories on the left:
+    - Audio
+    - MIDI
+    - Theme
+    - Paths
+    - Key Mapping
+    - Advanced
+  </Step>
+  
+  <Step title="Adjust Settings">
+    Modify settings as needed - most take effect immediately
+  </Step>
+</Steps>
+
+### Audio Settings
+
+<Accordion title="Standalone Audio Settings">
+  **Available in standalone mode only**
+  
+  **Device Selection:**
+  - Choose audio input/output devices
+  - Set sample rate (44100, 48000, 96000 Hz)
+  - Configure buffer size for latency vs performance
+  
+  **Channel Configuration:**
+  - Input channels to enable
+  - Output channels to enable  
+  - Multi-channel routing
+  
+  **Driver Type (platform-dependent):**
+  - macOS: CoreAudio
+  - Windows: ASIO, DirectSound, WASAPI
+  - Linux: ALSA, JACK
+</Accordion>
+
+<Accordion title="Plugin Audio Settings">
+  **Available in plugin mode**
+  
+  **Settings inherited from DAW:**
+  - Sample rate matches DAW project
+  - Buffer size set by DAW  
+  - I/O configuration set by track routing
+  
+  **Plugin-specific:**
+  - Oversampling enable/disable
+  - Latency compensation
+  - Thread count for processing
+</Accordion>
+
+**Recommended Buffer Sizes:**
+- **Low latency (live performance):** 64-128 samples
+- **Balanced:** 256-512 samples
+- **High CPU projects:** 512-1024 samples
+
+### MIDI Settings
+
+Configure MIDI input and output:
+
+<Steps>
+  <Step title="Enable MIDI Devices">
+    - Check boxes next to available MIDI devices
+    - Input devices for receiving MIDI
+    - Output devices for sending MIDI
+  </Step>
+  
+  <Step title="Channel Configuration">
+    - Enable specific MIDI channels if needed
+    - All channels enabled by default
+  </Step>
+  
+  <Step title="Test MIDI">
+    - MIDI indicator in statusbar blinks on activity
+    - Use `[notein]` or `[ctlin]` to receive
+    - Use `[noteout]` or `[ctlout]` to send
+  </Step>
+</Steps>
+
+<Note>
+MIDI settings are separate for standalone and plugin modes. Configure each independently if you use both.
+</Note>
+
+## Path Configuration
+
+### Search Paths
+
+Plugdata searches for abstractions and externals in specified directories:
+
+<Steps>
+  <Step title="Open Path Settings">
+    Settings > Paths panel
+  </Step>
+  
+  <Step title="Add Search Path">
+    Click **+** and select a directory containing:
+    - Abstraction .pd files
+    - External libraries
+    - Help files
+  </Step>
+  
+  <Step title="Organize Paths">
+    - Drag to reorder (searched in order)
+    - Remove unused paths
+    - Use relative paths for portable setups
+  </Step>
+</Steps>
+
+**Default Paths:**
+- Built-in ELSE library
+- Built-in Cyclone library  
+- User documents folder
+- Application support folder
+
+**Adding Custom Libraries:**
+1. Download or create library folder
+2. Add folder to search paths
+3. Restart plugdata (some externals)
+4. Access objects by name
+
+### Path Best Practices
+
+<Accordion title="Project Organization">
+  Create a project folder structure:
+  
+  ```
+  my-project/
+  ├── main.pd
+  ├── abstractions/    # Add to search path
+  │   ├── synth.pd
+  │   └── effect.pd
+  ├── samples/
+  │   └── audio.wav
+  └── data/
+      └── presets.txt
+  ```
+  
+  Add `my-project/abstractions/` to search paths.
+</Accordion>
+
+<Accordion title="Portable Patches">
+  For patches that work on any system:
+  
+  - Keep abstractions in same folder as main patch
+  - Use relative paths for file access
+  - Document any required external libraries
+  - Avoid absolute paths (`C:/Users/...`)
+</Accordion>
+
+<Accordion title="Shared Libraries">
+  For patches used across projects:
+  
+  - Create a central library folder
+  - Add to search paths on all systems
+  - Version control library separately
+  - Document dependencies clearly
+</Accordion>
+
+## Theme and Appearance
+
+### Choosing a Theme
+
+<Steps>
+  <Step title="Open Theme Settings">
+    Settings > Theme panel
+  </Step>
+  
+  <Step title="Select Theme">
+    Choose from built-in themes:
+    - Light theme
+    - Dark theme
+    - Custom themes
+  </Step>
+  
+  <Step title="Preview Changes">
+    Changes apply immediately for preview
+  </Step>
+</Steps>
+
+### Customizing Appearance
+
+**Available Options:**
+- **UI Scale** - Overall interface size
+- **Font** - Interface font family and size
+- **Object Colors** - Default object colors
+- **Connection Style** - Line thickness and curvature
+- **Grid Settings** - Grid spacing and visibility
+
+<Tip>
+Increase UI Scale on high-DPI displays or for better readability during live performances.
+</Tip>
+
+### Object Theme Manager
+
+Customize individual object appearance:
+
+1. Select objects
+2. Open Inspector panel
+3. Modify in Appearance section:
+   - Background color
+   - Outline color
+   - Text color  
+   - Border width
+
+Save custom themes for reuse across patches.
+
+## Keyboard Shortcuts
+
+### Viewing Shortcuts
+
+Access the keyboard shortcuts reference:
+- Settings > Key Mapping panel
+- See all available commands and current mappings
+- Search for specific actions
+
+### Customizing Shortcuts
+
+<Steps>
+  <Step title="Open Key Mapping">
+    Settings > Key Mapping panel
+  </Step>
+  
+  <Step title="Find Command">
+    Browse or search for the command to modify
+  </Step>
+  
+  <Step title="Assign Shortcut">
+    - Click in the shortcut field
+    - Press desired key combination
+    - Conflicts are highlighted
+  </Step>
+  
+  <Step title="Apply Changes">
+    Changes take effect immediately
+  </Step>
+</Steps>
+
+**Shortcut Tips:**
+- Use modifiers (Cmd/Ctrl, Shift, Alt) to avoid conflicts
+- Stick to conventions (Cmd/Ctrl+S for save, etc.)
+- Document custom shortcuts for collaboration
+- Export/import shortcut configs for consistency
+
+## Advanced Settings
+
+### Performance Options
+
+<Accordion title="Thread Count">
+  Number of threads for audio processing:
+  - Auto (recommended) - Matches CPU cores
+  - Manual - Set specific count
+  - More threads = better performance on multi-core CPUs
+  - Too many threads can increase overhead
+</Accordion>
+
+<Accordion title="DSP Settings">
+  Digital signal processing configuration:
+  - **Oversampling** - Reduce aliasing (increases CPU)
+  - **Limiter** - Prevent output clipping
+  - **Denormal prevention** - Avoid CPU spikes
+</Accordion>
+
+<Accordion title="GUI Performance">
+  Visual performance settings:
+  - **Framerate limit** - Cap GUI updates
+  - **Reduce animations** - Faster on slower systems
+  - **Disable shadows** - Reduce GPU usage
+</Accordion>
+
+### Advanced Patch Settings
+
+**Available per-patch:**
+- Canvas properties (size, position)
+- GOP settings (graph on parent)
+- Audio latency compensation  
+- MIDI channel routing
+
+<Note>
+Most users don't need to modify advanced settings. Defaults work well for typical use cases.
+</Note>
+
+## Settings Files and Locations
+
+### Settings Storage
+
+Plugdata stores settings in platform-specific locations:
+
+**macOS:**
+```
+~/Library/Application Support/plugdata/
+  ├── settings.json
+  ├── keymaps.xml
+  └── themes/
+```
+
+**Windows:**
+```
+C:/Users/[User]/AppData/Roaming/plugdata/
+  ├── settings.json  
+  ├── keymaps.xml
+  └── themes/
+```
+
+**Linux:**
+```
+~/.config/plugdata/
+  ├── settings.json
+  ├── keymaps.xml  
+  └── themes/
+```
+
+### Backup and Transfer
+
+To backup or transfer settings:
+
+1. Locate settings folder (see above)
+2. Copy entire folder
+3. Paste to new system in same location
+4. Restart plugdata
+
+<Warning>
+Manually editing settings files can cause issues. Use the Settings panel when possible.
+</Warning>
+
+## Plugin vs Standalone Differences
+
+### Plugin Mode
+
+**Settings controlled by DAW:**
+- Audio device and sample rate
+- Buffer size
+- Input/output routing
+
+**Settings in plugdata:**
+- MIDI device selection
+- GUI preferences
+- Keyboard shortcuts  
+- Paths and libraries
+
+**Presets:**
+- Saved by DAW
+- Recalled via DAW preset system
+- Can be shared as DAW preset files
+
+### Standalone Mode
+
+**Full control over:**
+- Audio device selection
+- Sample rate and buffer size
+- All input/output configuration
+
+**Presets:**
+- Manual save/load systems
+- Custom preset management in patch
+- File-based storage
+
+## Troubleshooting Settings
+
+<Accordion title="Settings Not Saving">
+  **Solutions:**
+  - Check file permissions on settings folder
+  - Ensure enough disk space
+  - Try resetting to defaults
+  - Check for conflicting settings files
+</Accordion>
+
+<Accordion title="Audio Not Working">
+  **Check:**
+  - Correct audio device selected
+  - Device not in use by other app
+  - Sample rate matches device capabilities  
+  - DSP enabled (power button in statusbar)
+</Accordion>
+
+<Accordion title="MIDI Not Responding">
+  **Verify:**
+  - MIDI device enabled in settings
+  - Device connected and powered on
+  - Using correct MIDI objects in patch
+  - MIDI indicator blinking on activity
+</Accordion>
+
+## Next Steps
+
+- [Audio Routing](/guides/audio-routing) - Configure complex audio I/O
+- [Creating Patches](/guides/creating-patches) - Build patches that save state properly
+- [Automation Parameters](/guides/automation-parameters) - Set up DAW preset integration

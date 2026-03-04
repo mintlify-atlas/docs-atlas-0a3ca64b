@@ -1,0 +1,157 @@
+---
+title: "Introduction to plugdata"
+description: "A modern visual audio programming environment combining Pure Data with a sleek JUCE-powered interface"
+---
+
+## Welcome to plugdata
+
+plugidata is a plugin wrapper for Pure Data that brings visual audio programming to your favorite DAWs. Built with the JUCE framework, plugdata provides a modern, user-friendly interface while maintaining full compatibility with Pure Data patches.
+
+<Note>
+plugidata works both as a plugin (VST3, AU, LV2, CLAP, AUv3) in DAWs and as a standalone application, offering the flexibility to work in the environment that suits you best.
+</Note>
+
+## What is Pure Data?
+
+Pure Data (Pd) is a visual programming language for creating interactive computer music and multimedia works. Originally developed by Miller Puckette, it allows you to create complex audio processing, synthesis, and analysis patches by connecting objects with virtual cables.
+
+plugidata takes this powerful paradigm and makes it accessible directly within your Digital Audio Workstation, with an enhanced GUI and additional features.
+
+## Key Features
+
+### Modern GUI Built with JUCE
+
+plugidata features a completely redesigned interface built with the industry-standard JUCE framework, offering:
+
+- Clean, modern visual design with light and dark modes
+- Smooth canvas navigation and zooming
+- Enhanced object rendering and connections
+- Native platform integration (macOS, Windows, Linux)
+- Retina/HiDPI display support
+
+### Extensive Object Library
+
+Out of the box, plugdata ships with comprehensive object libraries:
+
+- **ELSE (EL Locus Solus)**: A massive collection of 400+ objects for synthesis, effects, sequencing, and utilities by Alexandre Torres Porres
+- **Cyclone**: Max/MSP compatibility layer with 200+ objects, making it easy for Max users to transition
+- **Pure Data Vanilla**: All standard Pd objects included
+- **pdlua**: Script objects using Lua for custom behavior
+- **Gem**: Graphics and video processing capabilities (optional)
+- **Heavy/hvcc**: Compile patches to C++ code for optimization
+
+### Multiple Plugin Formats
+
+plugidata is available in all major plugin formats:
+
+- **VST3**: Windows, macOS, Linux
+- **AU (Audio Unit)**: macOS
+- **LV2**: Linux, macOS
+- **CLAP**: Cross-platform modern plugin format
+- **AUv3**: iOS
+- **Standalone**: Use without a DAW
+
+### Three Plugin Variants
+
+plugidata comes in three flavors to match your workflow:
+
+1. **plugdata (Instrument)**: Configured as a synthesizer/instrument plugin
+2. **plugdata-fx**: Configured as an audio effect plugin
+3. **plugdata-midi** (macOS only): MIDI processor AU plugin
+
+### DAW Integration Features
+
+- Full MIDI I/O support
+- Plugin parameter automation
+- DAW transport sync and playhead position
+- Audio input/output routing
+- State saving and preset management
+
+### Standalone Mode
+
+Run plugdata as a standalone application with:
+
+- Full audio and MIDI device configuration
+- Internal FluidSynth-based GM synthesizer
+- File association for .pd and .plugdata files
+- Complete development environment outside of a DAW
+
+## Who Should Use plugdata?
+
+### Max/MSP Users
+
+If you're coming from Max/MSP, plugdata offers a familiar visual patching paradigm with the included Cyclone library providing compatibility for many Max objects. The transition is smooth, and you get the added benefit of running your patches as plugins.
+
+### Pure Data Users
+
+Existing Pure Data users will find plugdata to be a comfortable upgrade with:
+
+- Full compatibility with existing .pd patches
+- Better visual design and user experience
+- The ability to load patches as plugins in DAWs
+- Access to all standard Pd objects plus ELSE and Cyclone libraries
+
+### Musicians and Producers
+
+If you want to create custom synthesizers, effects, or processors directly in your DAW without learning traditional coding:
+
+- Visual programming is more intuitive than text-based languages
+- Immediate audio feedback while building
+- No compile times - patches work instantly
+- Extensive documentation and object reference built-in
+
+### Sound Designers and Developers
+
+For advanced users looking to prototype or deploy custom audio tools:
+
+- Rapid prototyping with visual patching
+- Heavy/hvcc integration for C++ code generation
+- Access to low-level DSP objects
+- Ability to add custom externals by recompiling
+
+## How plugdata Differs from Vanilla Pure Data
+
+<Accordion title="Enhanced User Interface">
+plugidata features a completely rebuilt GUI using JUCE, offering modern design, better performance, smooth zooming, cleaner object rendering, and platform-native controls.
+</Accordion>
+
+<Accordion title="Plugin Wrapper Functionality">
+Unlike vanilla Pd, plugdata can run as a VST3, AU, LV2, CLAP, or AUv3 plugin inside DAWs like Ableton Live, Logic Pro, FL Studio, Reaper, and more.
+</Accordion>
+
+<Accordion title="Pre-bundled Libraries">
+plugidata ships with ELSE and Cyclone libraries included by default, providing 600+ additional objects without manual installation.
+</Accordion>
+
+<Accordion title="DAW Integration">
+Features like parameter automation, transport sync, plugin latency reporting, and preset management are built specifically for plugin use.
+</Accordion>
+
+<Accordion title="Cross-platform Consistency">
+While vanilla Pd can have platform-specific quirks, plugdata uses JUCE to provide a consistent experience across Windows, macOS, Linux, and iOS.
+</Accordion>
+
+<Accordion title="Modern Development">
+plugidata is actively developed with frequent updates, bug fixes, and feature additions driven by community feedback.
+</Accordion>
+
+## Getting Started
+
+Ready to dive in? Continue to the [Installation](/installation) guide to get plugdata running on your system, then follow the [Quickstart](/quickstart) tutorial to create your first patch.
+
+## Community and Support
+
+Join the plugdata community:
+
+- **Discord**: https://discord.gg/eT2RxdF9Nq - Share patches, report issues, request features
+- **GitHub**: https://github.com/plugdata-team/plugdata - Source code and issue tracking
+- **Wiki**: https://github.com/plugdata-team/plugdata/wiki - Community documentation
+
+## Open Source
+
+plugidata is free and open source software:
+
+- Licensed under GPL-3.0
+- Built on JUCE (AGPL-3.0)
+- Incorporates Pure Data, ELSE, Cyclone, pdlua, and many other open source projects
+- Contributions welcome on GitHub

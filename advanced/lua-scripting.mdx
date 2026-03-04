@@ -1,0 +1,543 @@
+---
+title: Lua Scripting
+description: Create custom Pure Data objects using Lua scripting with pd-lua
+---
+
+Plugdata includes pd-lua, allowing you to create custom objects using Lua scripting. This provides a flexible way to extend plugdata without compiling C code.
+
+## Overview
+
+Pd-lua enables:
+- ✅ Rapid prototyping of custom objects
+- ✅ No compilation required
+- ✅ Access to Pure Data's messaging system
+- ✅ Signal processing capabilities
+- ✅ Dynamic inlet/outlet creation
+
+## Quick Start
+
+### Simple Message Object
+
+Create a file named `reverse.pd_lua`:
+
+```lua reverse.pd_lua
+local Reverse = pd.Class:new():register("reverse")
+
+function Reverse:initialize(sel, atoms)
+    self.inlets = 1
+    self.outlets = 1
+    return true
+end
+
+function Reverse:in_1_list(l)
+    local reversed = {}
+    for i = #l, 1, -1 do
+        reversed[#reversed + 1] = l[i]
+    end
+    self:outlet(1, "list", reversed)
+end
+```
+
+Use in a patch:
+```pd
+[1 2 3 4 5(
+|
+[reverse]
+|
+[print reversed]  # outputs: 5 4 3 2 1
+```
+
+## The [lua] Object
+
+Plugdata includes a special `[lua]` object for inline Lua code:
+
+```lua
+[lua -in 2 -out 1 ; function in_1_float(self\, x) self:outlet(1\, "float"\, x * 2) end]
+```
+
+### [lua] Object Syntax
+
+```
+[lua <options> ; <code>]
+```
+
+**Options:**
+- `-in <n>` - Number of data inlets
+- `-out <n>` - Number of data outlets  
+- `-sigin <n>` - Number of signal inlets
+- `-sigout <n>` - Number of signal outlets
+
+**Code:**
+- Separate from options with `;`
+- Use `;` as newline separator
+- Escape commas in function arguments with `\,`
+
+### Inline Code Examples
+
+<CodeGroup>
+
+```lua Simple Multiplier
+[lua -in 1 -out 1 ; 
+  function in_1_float(self\, x) 
+    self:outlet(1\, "float"\, x * 3) 
+  end
+]
+```
+
+```lua Two Inputs
+[lua -in 2 -out 1 ; 
+  x = 0 ; y = 0 ; 
+  function in_1_float(self\, v) x = v end ; 
+  function in_2_float(self\, v) 
+    y = v ; 
+    self:outlet(1\, "float"\, x + y) 
+  end
+]
+```
+
+```lua Signal Processing
+[lua -sigin 1 -sigout 1 ; 
+  function perform(self\, in1\, out1) 
+    for i=1\,#in1 do 
+      out1[i] = in1[i] * 0.5 
+    end 
+  end
+]
+```
+
+</CodeGroup>
+
+The `[lua]` object source code: Resources/Patches/lua.pd_lua:1-155
+
+## Creating .pd_lua Files
+
+### Basic Structure
+
+```lua myobject.pd_lua
+-- Define class (name must match filename)
+local MyObject = pd.Class:new():register("myobject")
+
+-- Constructor
+function MyObject:initialize(sel, atoms)
+    self.inlets = 1
+    self.outlets = 1
+    -- Initialize your object
+    return true
+end
+
+-- Message handlers
+function MyObject:in_1_bang()
+    self:outlet(1, "bang", {})
+end
+
+function MyObject:in_1_float(f)
+    self:outlet(1, "float", {f * 2})
+end
+
+function MyObject:in_1_list(l)
+    self:outlet(1, "list", l)
+end
+```
+
+### Inlet/Outlet Configuration
+
+```lua
+function MyObject:initialize(sel, atoms)
+    -- Set inlet/outlet counts
+    self.inlets = 2     -- Number of inlets
+    self.outlets = 3    -- Number of outlets
+    
+    -- Or use tables for specific types
+    self.inlets = {DATA, DATA}           -- 2 message inlets
+    self.outlets = {DATA, SIGNAL, DATA}  -- message, signal, message
+    
+    return true
+end
+```
+
+## Message Handlers
+
+### Naming Convention
+
+```lua
+function ClassName:in_<inlet>_<selector>(args)
+```
+
+- `<inlet>`: Inlet number (1-based)
+- `<selector>`: Message type (bang, float, symbol, list, etc.)
+
+### Standard Selectors
+
+```lua
+-- Bang messages
+function MyObject:in_1_bang()
+    pd.post("received bang")
+end
+
+-- Float messages
+function MyObject:in_1_float(f)
+    pd.post("received float: " .. f)
+end
+
+-- Symbol messages  
+function MyObject:in_1_symbol(s)
+    pd.post("received symbol: " .. s)
+end
+
+-- List messages
+function MyObject:in_1_list(atoms)
+    pd.post("received list with " .. #atoms .. " elements")
+end
+
+-- Any message
+function MyObject:in_1(sel, atoms)
+    pd.post("received " .. sel)
+end
+```
+
+### Multiple Inlets
+
+```lua
+function MyObject:initialize(sel, atoms)
+    self.inlets = 3
+    self.outlets = 1
+    self.values = {0, 0, 0}
+    return true
+end
+
+function MyObject:in_1_float(f)
+    self.values[1] = f
+    self:calculate()
+end
+
+function MyObject:in_2_float(f)
+    self.values[2] = f
+    self:calculate()
+end
+
+function MyObject:in_3_float(f)
+    self.values[3] = f
+    self:calculate()
+end
+
+function MyObject:calculate()
+    local sum = self.values[1] + self.values[2] + self.values[3]
+    self:outlet(1, "float", {sum})
+end
+```
+
+## Sending Messages
+
+### Output Methods
+
+```lua
+-- Send from specific outlet
+self:outlet(outlet_num, selector, atoms)
+
+-- Examples:
+self:outlet(1, "bang", {})
+self:outlet(1, "float", {3.14})
+self:outlet(1, "symbol", {"hello"})
+self:outlet(1, "list", {1, 2, 3, 4})
+self:outlet(2, "frequency", {440})
+```
+
+### Atoms Table
+
+<Note>
+Atoms must be passed as a table, even for single values:
+- ✅ `{3.14}` 
+- ❌ `3.14`
+</Note>
+
+## Signal Processing
+
+### DSP Setup
+
+```lua
+local Gain = pd.Class:new():register("gain~")
+
+function Gain:initialize(sel, atoms)
+    self.inlets = {SIGNAL, DATA}  -- Signal in, control in
+    self.outlets = {SIGNAL}       -- Signal out
+    self.gain = atoms[1] or 1     -- Initial gain
+    return true
+end
+
+function Gain:in_2_float(f)
+    self.gain = f  -- Update gain from control inlet
+end
+
+function Gain:dsp(samplerate, blocksize)
+    -- Called when DSP is turned on
+    -- Return true to enable perform function
+    return true
+end
+
+function Gain:perform(in1, out1)
+    -- in1: input signal buffer (table)
+    -- out1: output signal buffer (table)
+    local gain = self.gain
+    for i = 1, #in1 do
+        out1[i] = in1[i] * gain
+    end
+end
+```
+
+### Signal Buffer Access
+
+```lua
+function MyObject:perform(in1, in2, out1, out2)
+    local blocksize = #in1  -- Number of samples
+    
+    for i = 1, blocksize do
+        -- Read from inputs
+        local sample1 = in1[i]
+        local sample2 = in2[i]
+        
+        -- Process
+        local result = sample1 + sample2
+        
+        -- Write to outputs
+        out1[i] = result
+        out2[i] = result * 0.5
+    end
+end
+```
+
+## Advanced Features
+
+### Creation Arguments
+
+```lua
+function MyObject:initialize(sel, atoms)
+    self.inlets = 1
+    self.outlets = 1
+    
+    -- atoms contains creation arguments
+    if #atoms >= 1 then
+        self.frequency = atoms[1]
+    else
+        self.frequency = 440  -- default
+    end
+    
+    if #atoms >= 2 and type(atoms[2]) == "string" then
+        self.waveform = atoms[2]
+    else
+        self.waveform = "sine"
+    end
+    
+    return true
+end
+```
+
+Usage: `[myobject 880 square]`
+
+### Clock (Timing)
+
+```lua
+local Metro = pd.Class:new():register("luametro")
+
+function Metro:initialize(sel, atoms)
+    self.inlets = 2
+    self.outlets = 1
+    self.interval = atoms[1] or 1000
+    self.clock = pd.Clock:new():register(self, "tick")
+    return true
+end
+
+function Metro:in_1_bang()
+    self.clock:delay(self.interval)
+end
+
+function Metro:in_1_float(f)
+    if f ~= 0 then
+        self.clock:delay(self.interval)
+    else
+        self.clock:unset()
+    end
+end
+
+function Metro:in_2_float(f)
+    self.interval = f
+end
+
+function Metro:tick()
+    self:outlet(1, "bang", {})
+    self.clock:delay(self.interval)  -- Re-trigger
+end
+
+function Metro:finalize()
+    self.clock:destruct()
+end
+```
+
+### Table Access
+
+```lua
+function MyObject:in_1_bang()
+    -- Read from Pd table
+    local t = pd.Table:new():sync("mytable")
+    if t then
+        local size = t:length()
+        local value = t:get(0)  -- Get first element
+        self:outlet(1, "float", {value})
+    end
+end
+
+function MyObject:in_1_float(f)
+    -- Write to Pd table
+    local t = pd.Table:new():sync("mytable")
+    if t then
+        t:set(0, f)  -- Set first element
+        t:redraw()   -- Update visual
+    end
+end
+```
+
+### Sending to Named Receivers
+
+```lua
+function MyObject:in_1_float(f)
+    -- Send to receiver
+    pd.send("myreceiver", "float", {f})
+end
+```
+
+## Utility Functions
+
+```lua
+-- Print to console
+pd.post("Hello from Lua!")
+
+-- Error message
+pd.error("Something went wrong")
+
+-- Get object info
+local name = self._name          -- Object class name
+local canvas = self._canvas      -- Parent canvas
+
+-- File operations
+self:dofile("myhelper.lua")      -- Load Lua file
+```
+
+## Complete Example: Random Sequencer
+
+```lua randomseq.pd_lua
+local RandomSeq = pd.Class:new():register("randomseq")
+
+function RandomSeq:initialize(sel, atoms)
+    self.inlets = 3
+    self.outlets = 1
+    
+    -- Parameters
+    self.min = atoms[1] or 0
+    self.max = atoms[2] or 127
+    self.steps = atoms[3] or 8
+    
+    -- Internal state
+    self.sequence = {}
+    self.position = 1
+    
+    -- Generate random sequence
+    self:generate()
+    
+    return true
+end
+
+function RandomSeq:generate()
+    self.sequence = {}
+    for i = 1, self.steps do
+        local value = math.random(self.min, self.max)
+        table.insert(self.sequence, value)
+    end
+end
+
+function RandomSeq:in_1_bang()
+    -- Output current step
+    local value = self.sequence[self.position]
+    self:outlet(1, "float", {value})
+    
+    -- Advance position
+    self.position = self.position + 1
+    if self.position > self.steps then
+        self.position = 1
+    end
+end
+
+function RandomSeq:in_1_float(f)
+    -- Set position
+    self.position = math.max(1, math.min(self.steps, math.floor(f)))
+end
+
+function RandomSeq:in_2_float(f)
+    -- Regenerate sequence
+    if f ~= 0 then
+        self:generate()
+    end
+end
+
+function RandomSeq:in_3_float(f)
+    -- Set number of steps
+    self.steps = math.max(1, math.floor(f))
+    self:generate()
+end
+```
+
+## Loading Lua Externals
+
+Place `.pd_lua` files in:
+- Same directory as your patch
+- `~/Documents/plugdata/externals/`
+- Any path in Pd's search paths
+
+Or use the `[lua]` object's load message:
+
+```pd
+[load myobject.pd_lua(
+|
+[lua]
+```
+
+## Debugging Tips
+
+```lua
+-- Print variable contents
+pd.post("Value: " .. tostring(self.value))
+
+-- Print table contents
+function print_table(t)
+    for k, v in pairs(t) do
+        pd.post(k .. ": " .. tostring(v))
+    end
+end
+
+-- Conditional logging
+if self.debug then
+    pd.post("Debug: entering function")
+end
+```
+
+## Limitations
+
+- GUI objects require C/C++ implementation
+- Performance-critical DSP better in C
+- Limited access to internal Pd structures
+- No direct access to audio hardware
+
+## Resources
+
+- pd-lua API implementation: Source/Pd/Setup.cpp:1317-1321, 1399-1408
+- [lua] object source: Resources/Patches/lua.pd_lua
+- Example externals in `Libraries/pd-lua/` directory
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Adding Externals" icon="puzzle-piece" href="/advanced/adding-externals">
+    Compile C externals into plugdata
+  </Card>
+  <Card title="Performance Optimization" icon="gauge-high" href="/advanced/performance-optimization">
+    Optimize your patches
+  </Card>
+</CardGroup>

@@ -1,0 +1,634 @@
+---
+title: "Plugin vs Standalone"
+description: "Understanding the differences between plugin and standalone modes in plugdata"
+---
+
+## Operating Modes
+
+plugindata can run in two distinct modes, each optimized for different workflows:
+
+1. **Plugin Mode** - Runs inside a DAW as a VST3/AU/LV2/CLAP plugin
+2. **Standalone Mode** - Runs as an independent desktop application
+
+Both modes share the same core Pure Data engine but differ in how they handle I/O, MIDI, and system integration.
+
+## Standalone Mode
+
+### Architecture
+
+Standalone mode runs as a native application with full system access.
+
+From `PluginProcessor.cpp:54-82`, the audio bus configuration differs:
+
+```cpp
+AudioProcessor::BusesProperties PluginProcessor::buildBusesProperties()
+{
+    AudioProcessor::BusesProperties busesProperties;
+    
+    if (ProjectInfo::isStandalone) {
+        // Standalone: Simple stereo I/O
+        busesProperties.addBus(true, "Main Input", 
+                              AudioChannelSet::stereo(), true);
+        busesProperties.addBus(false, "Main Output", 
+                              AudioChannelSet::stereo(), true);
+    } else {
+        // Plugin: Multiple aux buses
+        busesProperties.addBus(true, "Main Input", 
+                              AudioChannelSet::stereo(), true);
+        
+        for (int i = 1; i < numInputBuses; i++)
+            busesProperties.addBus(true, "Aux Input " + String(i), 
+                                  AudioChannelSet::stereo(), false);
+        
+        busesProperties.addBus(false, "Main Output", 
+                              AudioChannelSet::stereo(), true);
+        
+        for (int i = 1; i < numOutputBuses; i++)
+            busesProperties.addBus(false, "Aux Output" + String(i), 
+                                  AudioChannelSet::stereo(), false);
+    }
+    
+    return busesProperties;
+}
+```
+
+### Features
+
+**Window Management**
+- Multiple windows support
+- Native window decorations
+- Maximizable/fullscreen
+- Independent window positioning
+
+**File Operations**
+- Direct file system access
+- Save/load patches anywhere
+- External file management
+- No DAW session dependency
+
+**Audio/MIDI Routing**
+- Direct hardware access
+- Selectable audio interfaces
+- Virtual MIDI ports
+- System MIDI devices
+- Internal synthesizer support
+
+From `PluginProcessor.cpp:175-179`:
+
+```cpp
+if (ProjectInfo::isStandalone) {
+    midiDeviceManager.setInternalSynthPort(
+        settingsFile->getProperty<int>("internal_synth"));
+} else {
+    midiDeviceManager.setInternalSynthPort(0);
+}
+```
+
+**Multi-Patch Workflow**
+- Open multiple patches simultaneously
+- Tab-based interface
+- Split view support
+- Independent patch states
+
+**Preferences and Settings**
+- Global audio/MIDI settings
+- Theme customization
+- Library management
+- Path configuration
+
+### Audio I/O Configuration
+
+Standalone provides direct control over:
+
+**Input Configuration**
+- Device selection
+- Channel count (up to 32)
+- Sample rate selection
+- Buffer size adjustment
+
+**Output Configuration**  
+- Device selection
+- Channel routing
+- Sample rate matching
+- Latency compensation
+
+**Processing**
+- Configurable block size (64 samples default)
+- Independent sample rate
+- Direct hardware communication
+
+### Use Cases
+
+**Development and Testing**
+- Rapid prototyping
+- Algorithm development
+- Quick experimentation
+- Debugging and testing
+
+**Live Performance**
+- No DAW required
+- Lower latency potential
+- Direct hardware access
+- Simpler signal flow
+
+**Sound Design**
+- Standalone synthesizers
+- Audio processors
+- Effects chains
+- Experimental instruments
+
+**Education**  
+- Learning Pure Data
+- Teaching DSP concepts
+- No DAW knowledge required
+- Simpler environment
+
+## Plugin Mode
+
+### Architecture
+
+plugindata integrates into DAWs using standard plugin formats:
+
+- **VST3** - Steinberg's cross-platform format
+- **AU** - Apple's Audio Units (macOS)
+- **LV2** - Open-source format (Linux)
+- **CLAP** - Modern open standard
+
+### Integration Features
+
+**DAW Synchronization**
+
+From `PluginProcessor.cpp:1055-1128`, playhead information is synchronized:
+
+```cpp
+void PluginProcessor::sendPlayhead()
+{
+    AudioPlayHead const* playhead = getPlayHead();
+    if (!playhead) return;
+    
+    auto infos = playhead->getPosition();
+    
+    lockAudioThread();
+    setThis();
+    
+    if (infos.hasValue()) {
+        // Playing state
+        atoms_playhead[0] = infos->getIsPlaying();
+        sendMessage("__playhead", "playing", atoms_playhead);
+        
+        // Recording state
+        atoms_playhead[0] = infos->getIsRecording();
+        sendMessage("__playhead", "recording", atoms_playhead);
+        
+        // Loop points
+        atoms_playhead[0] = infos->getIsLooping();
+        auto loopPoints = infos->getLoopPoints();
+        if (loopPoints.hasValue()) {
+            atoms_playhead.emplace_back(loopPoints->ppqStart);
+            atoms_playhead.emplace_back(loopPoints->ppqEnd);
+        }
+        sendMessage("__playhead", "looping", atoms_playhead);
+        
+        // Tempo
+        if (infos->getBpm().hasValue()) {
+            atoms_playhead[0] = static_cast<float>(*infos->getBpm());
+            sendMessage("__playhead", "bpm", atoms_playhead);
+        }
+        
+        // Position (PPQ, samples, seconds)
+        auto ppq = infos->getPpqPosition();
+        auto samplesTime = infos->getTimeInSamples();
+        auto secondsTime = infos->getTimeInSeconds();
+        
+        atoms_playhead.resize(3);
+        atoms_playhead[0] = ppq.hasValue() ? *ppq : 0.0f;
+        atoms_playhead[1] = samplesTime.hasValue() ? *samplesTime : 0.0f;
+        atoms_playhead[2] = secondsTime.hasValue() ? *secondsTime : 0.0f;
+        sendMessage("__playhead", "position", atoms_playhead);
+    }
+    
+    unlockAudioThread();
+}
+```
+
+Pd patches can receive:
+- Playing/recording/looping state
+- Tempo (BPM)
+- Time signature
+- Transport position (PPQ, samples, seconds)
+- Loop points
+- Frame rate
+
+Access via:
+```pd
+[r __playhead playing]  ← 0 or 1
+[r __playhead bpm]      ← Current tempo
+[r __playhead position] ← PPQ, samples, seconds (list)
+```
+
+**Automation**
+
+From `PluginProcessor.cpp:120-131`, parameters are exposed:
+
+```cpp
+// Volume parameter (built-in)
+auto* volumeParameter = new PlugDataParameter(this, "volume", 
+                                             0.8f, true, 0, 0.0f, 1.0f);
+addParameter(volumeParameter);
+
+// General purpose automation (param1-paramN)
+for (int n = 0; n < numParameters; n++) {
+    auto* parameter = new PlugDataParameter(this, 
+                                           "param" + String(n + 1), 
+                                           0.0f, false, n + 1, 0.0f, 1.0f);
+    addParameter(parameter);
+}
+```
+
+Automation parameters:
+- `param1` through `param64` (default)
+- Mapped to Pd receivers: `[r param1]`, `[r param2]`, etc.
+- Fully automatable in DAW
+- Saved with DAW project
+
+From `PluginProcessor.cpp:1149-1159`, parameter updates:
+
+```cpp
+void PluginProcessor::sendParameters()
+{
+    ScopedLock lock(audioLock);
+    for (auto* param : enabledParameters) {
+        if (EXPECT_UNLIKELY(param->wasChanged())) {
+            auto title = param->getTitle();
+            sendFloat(title.data(), param->getUnscaledValue());
+            param->setUnchanged();
+        }
+    }
+}
+```
+
+**State Management**
+
+Plugin state is saved with DAW projects:
+- Patch content (embedded)
+- Parameter values
+- Editor size/position
+- Connection paths (segmented)
+- GUI states
+
+From `PluginProcessor.cpp:1224-1308`:
+
+```cpp
+void PluginProcessor::getStateInformation(MemoryBlock& destData)
+{
+    setThis();
+    MemoryOutputStream ostream(destData, false);
+    
+    ostream.writeInt(patches.size());
+    
+    // Save each patch
+    lockAudioThread();
+    for (auto const& patch : patches) {
+        auto content = patch->getCanvasContent();
+        auto patchFile = patch->getCurrentFile().getFullPathName();
+        
+        // Store content and location
+        ostream.writeString(content);
+        ostream.writeString(patchFile);
+    }
+    unlockAudioThread();
+    
+    // Save settings
+    ostream.writeInt(getLatencySamples() - Instance::getBlockSize());
+    ostream.writeInt(oversampling);
+    ostream.writeFloat(getValue<float>(tailLength));
+    
+    // XML format for extensibility
+    auto xml = XmlElement("plugdata_save");
+    xml.setAttribute("Version", PLUGDATA_VERSION);
+    xml.setAttribute("Oversampling", oversampling);
+    xml.setAttribute("Width", editor->getWidth());
+    xml.setAttribute("Height", editor->getHeight());
+    
+    PlugDataParameter::saveStateInformation(xml, getParameters());
+}
+```
+
+**MIDI Routing**
+
+Plugin mode MIDI handling from `PluginProcessor.cpp:1166-1201`:
+
+```cpp
+void PluginProcessor::sendMidiBuffer(int const device, 
+                                    MidiBuffer const& buffer)
+{
+    if (acceptsMidi()) {
+        for (auto event : buffer) {
+            auto message = event.getMessage();
+            auto const channel = message.getChannel() + (device << 4);
+            
+            if (message.isNoteOn()) {
+                sendNoteOn(channel, message.getNoteNumber(), 
+                          message.getVelocity());
+            } else if (message.isNoteOff()) {
+                sendNoteOn(channel, message.getNoteNumber(), 0);
+            } else if (message.isController()) {
+                sendControlChange(channel, message.getControllerNumber(), 
+                                message.getControllerValue());
+            } else if (message.isPitchWheel()) {
+                sendPitchBend(channel, 
+                            message.getPitchWheelValue() - 8192);
+            }
+            // ... additional MIDI message types
+        }
+    }
+}
+```
+
+### Channel Configuration
+
+Plugin mode supports flexible I/O:
+
+**Input Buses**
+- Main input (stereo, enabled)
+- Aux inputs 1-N (stereo, optional)
+- Up to 32 total input channels
+
+**Output Buses**  
+- Main output (stereo, enabled)
+- Aux outputs 1-N (stereo, optional)
+- Up to 32 total output channels
+
+**Pd Access**
+```pd
+[adc~ 1 2]        ← Main input L/R
+[adc~ 3 4]        ← Aux input 1 L/R
+[adc~ 5 6]        ← Aux input 2 L/R
+
+[dac~ 1 2]        ← Main output L/R
+[dac~ 3 4]        ← Aux output 1 L/R  
+[dac~ 5 6]        ← Aux output 2 L/R
+```
+
+### Plugin-Specific Features
+
+**Presentation Mode**
+
+From `PluginMode.h:13-526`, dedicated plugin UI:
+
+```cpp
+class PluginMode final : public Component
+{
+public:
+    explicit PluginMode(PluginEditor* editor, pd::Patch::Ptr patch)
+        : patchPtr(patch)
+        , cnv(std::make_unique<Canvas>(editor, patch, this))
+    {
+        patch->openInPluginMode = true;
+        
+        // Titlebar with controls
+        titleBar.setBounds(0, 0, width, titlebarHeight);
+        
+        // Scale selector
+        scaleComboBox.addItemList(itemList, 1);
+        scaleComboBox.onChange = [this] {
+            setWidthAndHeight(pluginScales[itemId - 1].floatScale);
+        };
+    }
+    
+    void setWidthAndHeight(float scale)
+    {
+        cnv->zoomScale = scale;
+        
+        auto newWidth = static_cast<int>(width * scale);
+        auto newHeight = static_cast<int>(height * scale) + titlebarHeight;
+        
+        editor->pluginConstrainer.setSizeLimits(
+            newWidth, newHeight, newWidth, newHeight);
+        editor->setSize(newWidth, newHeight);
+    }
+};
+```
+
+Features:
+- Fixed-size UI mode
+- Zoom levels (50%, 75%, 100%, 125%, 150%, 175%, 200%)
+- Fullscreen mode (standalone only)
+- Titlebar with patch name
+- Edit mode toggle
+- Clipped rendering area
+
+Scale settings are saved in `meta.json`:
+```json
+{
+  "Zoom": 3,
+  "Scale": 1.0
+}
+```
+
+**Sample Rate Handling**
+
+From `PluginProcessor.cpp:699-759`:
+
+```cpp
+void PluginProcessor::prepareToPlay(double const sampleRate, 
+                                   int const samplesPerBlock)
+{
+    if (approximatelyEqual(sampleRate, 0.0))
+        return;
+    
+    float const oversampleFactor = 1 << oversampling;
+    auto maxChannels = std::max(getTotalNumInputChannels(), 
+                                getTotalNumOutputChannels());
+    
+    prepareDSP(getTotalNumInputChannels(), 
+              getTotalNumOutputChannels(), 
+              sampleRate * oversampleFactor);
+    
+    // Setup oversampling if enabled
+    oversampler = std::make_unique<dsp::Oversampling<float>>(
+        std::max(1, maxChannels), oversampling, 
+        dsp::Oversampling<float>::filterHalfBandPolyphaseIIR, false);
+    
+    oversampler->initProcessing(samplesPerBlock);
+    
+    // Pd uses fixed 64-sample blocks
+    auto const pdBlockSize = Instance::getBlockSize(); // 64
+    
+    // Variable block size handling for plugins
+    variableBlockSize = !ProjectInfo::isStandalone || 
+                       samplesPerBlock < pdBlockSize || 
+                       samplesPerBlock % pdBlockSize != 0;
+    
+    if (variableBlockSize) {
+        inputFifo = std::make_unique<AudioMidiFifo>(
+            maxChannels, 
+            std::max<int>(pdBlockSize, samplesPerBlock * oversampleFactor) * 3);
+        outputFifo = std::make_unique<AudioMidiFifo>(
+            maxChannels, 
+            std::max<int>(pdBlockSize, samplesPerBlock * oversampleFactor) * 3);
+        outputFifo->writeSilence(Instance::getBlockSize());
+    }
+}
+```
+
+Pd always processes in 64-sample blocks internally. Plugins handle arbitrary block sizes via FIFO buffering.
+
+**Latency Reporting**
+
+From `PluginProcessor.cpp:192`:
+
+```cpp
+setLatencySamples(pd::Instance::getBlockSize());
+```
+
+Plugins report 64 samples of latency (one Pd block) to the DAW for automatic delay compensation.
+
+### Plugin Limitations
+
+**File Access**
+- No direct file browser
+- Patches embedded in DAW session
+- External files must be in search path
+- No arbitrary file writing
+
+**Window Management**  
+- Single window per instance
+- Size constrained by plugin mode
+- No multiple patches per instance
+- DAW controls window state
+
+**Audio Routing**
+- Bus configuration set by DAW
+- Cannot change I/O at runtime
+- No direct hardware access
+- Routing through DAW mixer
+
+**Processing**  
+- Fixed to DAW sample rate
+- DAW controls buffer size
+- Must handle variable block sizes
+- Subject to DAW thread priority
+
+### Oversampling
+
+Both modes support oversampling from `PluginProcessor.cpp:655-668`:
+
+```cpp
+void PluginProcessor::setOversampling(int const amount)
+{
+    if (oversampling == amount)
+        return;
+    
+    oversampling = amount;  // 0=none, 1=2x, 2=4x, 3=8x
+    
+    auto const blockSize = AudioProcessor::getBlockSize();
+    auto const sampleRate = AudioProcessor::getSampleRate();
+    
+    suspendProcessing(true);
+    prepareToPlay(sampleRate, blockSize);
+    suspendProcessing(false);
+}
+```
+
+Oversampling reduces aliasing in nonlinear processes:
+- **None** (1x): Standard quality
+- **2x**: Good quality, moderate CPU
+- **4x**: High quality, higher CPU  
+- **8x**: Maximum quality, significant CPU
+
+Oversampling uses polyphase IIR filters for efficiency.
+
+## Choosing the Right Mode
+
+### Use Standalone When:
+
+✅ Prototyping new ideas quickly  
+✅ Learning Pure Data/DSP  
+✅ Live performance without DAW  
+✅ Testing with different audio interfaces  
+✅ Working with multiple patches simultaneously  
+✅ Need direct file system access  
+✅ Developing standalone instruments/effects  
+
+### Use Plugin When:
+
+✅ Integrating with DAW workflow  
+✅ Recording automation  
+✅ Tempo sync required  
+✅ Multiple instances needed  
+✅ Mixing with other plugins  
+✅ Session recall important  
+✅ Distributing to users with DAWs  
+
+## Migration Between Modes
+
+### Standalone to Plugin
+
+1. **Save patch** in standalone
+2. **Load in DAW** as plugin
+3. **Configure I/O** to match DAW routing
+4. **Map automation** parameters
+5. **Test playhead** sync if needed
+6. **Set plugin mode** for presentation
+
+### Plugin to Standalone
+
+1. **Export patch** from DAW session
+2. **Open in standalone**
+3. **Configure audio/MIDI** devices
+4. **Test I/O** channels
+5. **Adjust workflow** for multi-patch if needed
+
+## Best Practices
+
+### Cross-Compatible Patches
+
+To work well in both modes:
+
+**Use Relative Paths**
+```pd
+[declare -path abstractions]  ← Search in subdirectory
+[declare -lib else]            ← Load library
+```
+
+**Dynamic Channel Count**
+```pd
+[adc~ 1 2]    ← Always use channels 1-2 for main I/O
+[dac~ 1 2]    ← Works in both modes
+```
+
+**Conditional Automation**
+```pd
+[r param1]    ← Works in plugin (automation)
+[hsl 128 15]  ← Works in standalone (GUI control)
+```
+
+**Portable File Handling**
+- Keep external files in same directory as patch
+- Use relative paths with `[declare]`
+- Test in both modes before distribution
+
+### Performance Optimization
+
+**Plugin Mode**
+- Minimize processing (shared CPU with DAW)
+- Use efficient algorithms
+- Consider oversampling cost
+- Report accurate latency
+
+**Standalone Mode**  
+- Can use more CPU if needed
+- Direct hardware = lower latency possible
+- Adjust buffer size for latency/stability
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="DAW Integration" icon="waveform-lines" href="/concepts/daw-integration">
+    Learn how plugdata integrates with your DAW
+  </Card>
+  <Card title="Patching Basics" icon="pencil" href="/concepts/patching-basics">
+    Master the fundamentals of Pure Data patching
+  </Card>
+</CardGroup>

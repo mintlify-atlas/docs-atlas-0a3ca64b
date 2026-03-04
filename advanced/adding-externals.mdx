@@ -1,0 +1,350 @@
+---
+title: Adding Custom Externals
+description: How to compile your own Pure Data externals into plugdata
+---
+
+Plugdata allows you to compile custom Pure Data externals directly into the plugin, making them available in both plugin and standalone versions.
+
+## Overview
+
+Unlike traditional Pure Data where externals are loaded as shared libraries, plugdata statically compiles externals into the application. This ensures:
+
+- ✅ Externals work in plugin hosts (DAWs)
+- ✅ No external file dependencies
+- ✅ Consistent behavior across platforms
+- ✅ Better performance and security
+
+## Quick Start
+
+<Steps>
+
+### Step 1: Add Your Source Files
+
+You have two options:
+
+**Option A: Add to externals target (recommended)**
+
+Edit `Libraries/CMakeLists.txt` and add your sources to the externals target:
+
+```cmake Libraries/CMakeLists.txt
+add_library(externals STATIC 
+    ${ELSE_SOURCES} 
+    ${CYCLONE_SOURCES} 
+    ${PDLUA_SOURCES}
+    # Add your external here:
+    path/to/your/external.c
+)
+```
+
+**Option B: Add to ELSE folder (automatic)**
+
+Place your `.c` files in `Libraries/ELSE/Source/` or `Libraries/pd-else/Source/Audio/`:
+
+```bash
+cp myexternal.c Libraries/pd-else/Source/Audio/
+```
+
+All `.c` files in these folders are automatically compiled (see Libraries/CMakeLists.txt:215-241).
+
+### Step 2: Register Setup Function
+
+Edit `Source/Pd/Setup.cpp` and add your setup function declaration and call.
+
+**Add declaration** (in the `extern "C"` block around line 725):
+
+```cpp Source/Pd/Setup.cpp
+extern "C" {
+
+// ... existing declarations ...
+
+void myexternal_setup();  // Add your declaration
+
+}
+```
+
+**Call setup function** in one of these initialization functions:
+
+```cpp Source/Pd/Setup.cpp
+void Setup::initialiseELSE()
+{
+    // ... existing setup calls ...
+    
+    myexternal_setup();  // Add your setup call
+    
+    // ... more setup calls ...
+}
+```
+
+### Step 3: Rebuild
+
+```bash
+cd build
+cmake --build .
+```
+
+</Steps>
+
+## Setup Function Locations
+
+Choose where to call your setup function based on desired namespace:
+
+### libpd_init_pdlua (Recommended)
+
+Called in `Setup::initialisePdLua()` (Source/Pd/Setup.cpp:1399-1402).
+
+**Best for:**
+- Standalone externals
+- No namespace prefix required
+- Independent objects
+
+**Example:**
+```cpp
+void Setup::initialisePdLua(char const* datadir, char* vers, int const vers_len, 
+                             void (*register_class_callback)(char const*))
+{
+    pdlua_setup(datadir, vers, vers_len, register_class_callback);
+    
+    myexternal_setup();  // Available as [myexternal]
+}
+```
+
+### initialiseELSE
+
+Called in `Setup::initialiseELSE()` (Source/Pd/Setup.cpp:1473).
+
+**Note:**
+<Warning>
+Externals registered here are available under **both** the plain name and `else/` prefix:
+- `[myexternal]` ✅
+- `[else/myexternal]` ✅
+</Warning>
+
+**Example:**
+```cpp
+void Setup::initialiseELSE()
+{
+    pdlink_setup();
+    pdlink_tilde_setup();
+    
+    myexternal_setup();  // Available as [myexternal] and [else/myexternal]
+    
+    // ... rest of ELSE setup ...
+}
+```
+
+### initialiseCyclone
+
+Similar to ELSE, but for Cyclone compatibility.
+
+**Note:**
+Externals available as `[myexternal]` and `[cyclone/myexternal]`.
+
+## Complete Example
+
+Let's add a simple gain external:
+
+<Steps>
+
+### Step 1: Create External Source
+
+Create `Libraries/pd-else/Source/Audio/mygain~.c`:
+
+```c Libraries/pd-else/Source/Audio/mygain~.c
+#include "m_pd.h"
+
+static t_class *mygain_tilde_class;
+
+typedef struct _mygain_tilde {
+    t_object x_obj;
+    t_float x_gain;
+    t_float x_f;  // dummy float for signal inlet
+} t_mygain_tilde;
+
+t_int *mygain_tilde_perform(t_int *w)
+{
+    t_mygain_tilde *x = (t_mygain_tilde *)(w[1]);
+    t_sample *in = (t_sample *)(w[2]);
+    t_sample *out = (t_sample *)(w[3]);
+    int n = (int)(w[4]);
+    t_float gain = x->x_gain;
+    
+    while (n--)
+        *out++ = *in++ * gain;
+    
+    return (w+5);
+}
+
+void mygain_tilde_dsp(t_mygain_tilde *x, t_signal **sp)
+{
+    dsp_add(mygain_tilde_perform, 4, x,
+        sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
+}
+
+void mygain_tilde_float(t_mygain_tilde *x, t_float f)
+{
+    x->x_gain = f;
+}
+
+void *mygain_tilde_new(t_floatarg f)
+{
+    t_mygain_tilde *x = (t_mygain_tilde *)pd_new(mygain_tilde_class);
+    x->x_gain = f;
+    outlet_new(&x->x_obj, &s_signal);
+    return (x);
+}
+
+void mygain_tilde_setup(void)
+{
+    mygain_tilde_class = class_new(gensym("mygain~"),
+        (t_newmethod)mygain_tilde_new, 0,
+        sizeof(t_mygain_tilde),
+        CLASS_DEFAULT,
+        A_DEFFLOAT, 0);
+    
+    CLASS_MAINSIGNALIN(mygain_tilde_class, t_mygain_tilde, x_f);
+    class_addmethod(mygain_tilde_class, (t_method)mygain_tilde_dsp,
+        gensym("dsp"), A_CANT, 0);
+    class_addfloat(mygain_tilde_class, mygain_tilde_float);
+}
+```
+
+### Step 2: Declare Setup Function
+
+Add to `Source/Pd/Setup.cpp`:
+
+```cpp Source/Pd/Setup.cpp
+extern "C" {
+
+// Around line 1232, with other ELSE declarations:
+void mygain_tilde_setup();
+
+}
+```
+
+### Step 3: Call Setup Function
+
+Add to `Setup::initialiseELSE()` in `Source/Pd/Setup.cpp`:
+
+```cpp Source/Pd/Setup.cpp
+void Setup::initialiseELSE()
+{
+    pdlink_setup();
+    pdlink_tilde_setup();
+    
+    // Add after other setup calls:
+    mygain_tilde_setup();
+    
+    knob_setup();
+    above_tilde_setup();
+    // ... rest of ELSE externals ...
+}
+```
+
+### Step 4: Build and Test
+
+```bash
+cd build
+cmake --build .
+```
+
+Test in plugdata:
+```pd
+[osc~ 440]
+|
+[mygain~ 0.5]
+|
+[dac~]
+```
+
+</Steps>
+
+## Multi-File Externals
+
+For externals with multiple source files:
+
+```cmake Libraries/CMakeLists.txt
+list(APPEND MY_EXTERNAL_SOURCES
+    path/to/myexternal.c
+    path/to/myexternal_helper.c
+    path/to/myexternal_dsp.c
+)
+
+add_library(externals STATIC 
+    ${ELSE_SOURCES}
+    ${CYCLONE_SOURCES}
+    ${PDLUA_SOURCES}
+    ${MY_EXTERNAL_SOURCES}
+)
+```
+
+## Including Headers
+
+For externals needing additional headers:
+
+```cmake Libraries/CMakeLists.txt
+target_include_directories(externals PRIVATE
+    ${ELSE_INCLUDES}
+    path/to/your/headers
+)
+```
+
+## Platform-Specific Code
+
+Use preprocessor directives for platform-specific code:
+
+```c
+#ifdef _WIN32
+    // Windows-specific code
+#elif __APPLE__
+    // macOS-specific code
+#elif __linux__
+    // Linux-specific code
+#endif
+```
+
+## Common Issues
+
+### Undefined Reference Errors
+
+```
+undefined reference to 'myexternal_setup'
+```
+
+**Solution:** Ensure setup function is declared in `extern "C"` block and definition matches exactly.
+
+### External Not Found
+
+```
+... couldn't create
+```
+
+**Solution:** Verify setup function was called and class name matches object name.
+
+### Multiple Definition Errors
+
+```
+multiple definition of 'myexternal_setup'
+```
+
+**Solution:** Check that source file isn't added twice in CMakeLists.txt.
+
+## Code References
+
+Key files for adding externals:
+
+- External targets: Libraries/CMakeLists.txt:453-454
+- ELSE auto-compilation: Libraries/CMakeLists.txt:215-241  
+- Setup declarations: Source/Pd/Setup.cpp:159-1321
+- initialiseELSE: Source/Pd/Setup.cpp:1473-1829
+- initialisePdLua: Source/Pd/Setup.cpp:1399-1402
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building from Source" icon="hammer" href="/advanced/building-from-source">
+    Learn the complete build process
+  </Card>
+  <Card title="Lua Scripting" icon="code" href="/advanced/lua-scripting">
+    Create externals using Lua scripting
+  </Card>
+</CardGroup>

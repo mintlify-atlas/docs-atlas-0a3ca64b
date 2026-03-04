@@ -1,0 +1,257 @@
+---
+title: Contributing
+description: How to contribute to the plugdata project
+---
+
+Thank you for your interest in contributing to plugdata! Contributions from the community help make plugdata better for everyone.
+
+## Ways to Contribute
+
+There are many ways to contribute to plugdata:
+
+- **Report bugs**: Help identify issues and improve stability
+- **Suggest features**: Share ideas for new functionality
+- **Submit code**: Fix bugs, add features, or improve performance
+- **Improve documentation**: Help others learn and use plugdata
+- **Test releases**: Try experimental builds and provide feedback
+- **Create examples**: Share patches and tutorials
+- **Help others**: Answer questions on Discord or GitHub Discussions
+
+## Code of Conduct
+
+The plugdata project follows the Contributor Covenant Code of Conduct. All contributors are expected to uphold these standards.
+
+### Our Pledge
+
+We pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+
+### Our Standards
+
+**Positive behaviors include:**
+- Demonstrating empathy and kindness toward other people
+- Being respectful of differing opinions, viewpoints, and experiences
+- Giving and gracefully accepting constructive feedback
+- Accepting responsibility and apologizing for mistakes
+- Focusing on what is best for the overall community
+
+**Unacceptable behaviors include:**
+- The use of sexualized language or imagery
+- Trolling, insulting or derogatory comments, and personal or political attacks
+- Public or private harassment
+- Publishing others' private information without explicit permission
+- Other conduct inappropriate in a professional setting
+
+### Enforcement
+
+Instances of unacceptable behavior may be reported to the community leaders at **timschoen123@gmail.com**. All complaints will be reviewed and investigated promptly and fairly.
+
+For full details, see [CODE_OF_CONDUCT.md](https://github.com/plugdata-team/plugdata/blob/main/CODE_OF_CONDUCT.md) on GitHub.
+
+## Getting Started
+
+### Setting Up Development Environment
+
+1. **Fork and clone the repository**
+   ```bash
+   git clone --recursive https://github.com/YOUR-USERNAME/plugdata.git
+   cd plugdata
+   ```
+
+   Important: Use the `--recursive` flag to initialize git submodules, or run:
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+2. **Install dependencies**
+
+   **Linux**: JUCE framework requires several dependencies. Refer to [Linux Dependencies.md](https://github.com/juce-framework/JUCE/blob/master/docs/Linux%20Dependencies.md) and use the full installation command.
+
+   **macOS/Windows**: Most dependencies are included or automatically managed.
+
+3. **Build plugdata**
+   ```bash
+   mkdir build && cd build
+   cmake ..
+   cmake --build .
+   ```
+
+   Optional generators:
+   - `-G"Unix Makefiles"` (Linux/macOS)
+   - `-G"Xcode"` (macOS)
+   - `-G"Visual Studio 17 2022" -A x64` (Windows)
+
+### Build Options
+
+Customize your build with these CMake options:
+
+- `-DQUICK_BUILD=1`: Skip slow-to-compile objects (Gem, sfz~, ffmpeg players)
+- `-DENABLE_GEM=0`: Disable Gem objects
+- `-DENABLE_SFIZZ=0`: Disable sfz~ support
+- `-DENABLE_FFMPEG=0`: Disable ffmpeg-based audio players
+- `-DENABLE_PERFETTO=1`: Enable Perfetto performance tracing
+
+### Build Requirements
+
+- **CMake**: 3.21 or later (required for CLAP plugin builds)
+- **C++ compiler**: Support for C++17 or later
+- **Git**: For cloning and submodule management
+
+## Contributing Code
+
+### GitHub Workflow
+
+1. **Create an issue or discuss your idea**
+   - Check if an issue already exists
+   - For major changes, discuss in Discord or GitHub Discussions first
+
+2. **Fork the repository**
+   - Create a fork on GitHub
+   - Clone your fork locally
+
+3. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+4. **Make your changes**
+   - Write clear, maintainable code
+   - Follow existing code style and conventions
+   - Add comments for complex logic
+   - Test your changes thoroughly
+
+5. **Commit your changes**
+   ```bash
+   git add .
+   git commit -m "Add descriptive commit message"
+   ```
+
+6. **Push to your fork**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+7. **Create a Pull Request**
+   - Go to the [plugdata repository](https://github.com/plugdata-team/plugdata)
+   - Click "New Pull Request"
+   - Select your branch and describe your changes
+
+### Coding Standards
+
+- **Style**: Follow the existing code style in the project
+- **Formatting**: Use consistent indentation and spacing
+- **Comments**: Add comments for non-obvious code
+- **Commits**: Write clear, descriptive commit messages
+- **Testing**: Test your changes on your platform
+- **Documentation**: Update relevant documentation for new features
+
+### Testing
+
+Before submitting:
+- Build successfully on your platform
+- Test core functionality isn't broken
+- Verify your specific changes work as expected
+- Test in both standalone and plugin modes if applicable
+- Check for memory leaks or performance issues
+
+## Reporting Issues
+
+### Creating Good Bug Reports
+
+Include:
+- **Environment**: OS, plugdata version, DAW (if applicable)
+- **Plugin format**: VST3, AU, LV2, CLAP, or standalone
+- **Steps to reproduce**: Clear, numbered steps
+- **Expected behavior**: What should happen
+- **Actual behavior**: What actually happens
+- **Screenshots/patches**: Visual aids or minimal reproduction patches
+- **Crash logs**: If the application crashed
+
+### Before Reporting
+
+1. Search existing issues for duplicates
+2. Try the latest release or experimental build
+3. Verify it's not a problem with your patch
+4. Collect all relevant information
+
+## Adding Custom Externals
+
+You can add your own externals to plugdata by recompiling:
+
+1. **Add sources** to the "externals" target in `Libraries/CMakeLists.txt`, or place `.c` files in `Libraries/ELSE/Source/` (they'll be compiled automatically)
+
+2. **Add setup function** in `Source/Pd/Setup.cpp`:
+   - Call your setup function inside `libpd_init_pdlua`, `initialiseELSE`, or `initialiseCyclone`
+   - Note: Using `initialiseELSE` or `initialiseCyclone` makes externals available under the `else/*` or `cyclone/*` prefix
+
+3. **Rebuild plugdata** with your changes
+
+## Documentation Contributions
+
+Documentation improvements are always welcome:
+- Fix typos or unclear explanations
+- Add examples and tutorials
+- Improve installation instructions
+- Document undocumented features
+- Create video tutorials or guides
+
+## Performance Profiling
+
+For performance optimization work, plugdata supports Perfetto tracing:
+
+1. **Build with Perfetto**:
+   ```bash
+   cmake -DENABLE_PERFETTO=1 ..
+   cmake --build .
+   ```
+
+2. **Add trace points**:
+   - Add `TRACE_COMPONENT()` to function bodies
+   - Or use `Resources/Scripts/add_perfetto_tracepoints.py` to automate
+
+3. **Compile in Release mode** for accurate profiling
+
+4. **Learn more**: See this [Perfetto with JUCE blog post](https://melatonin.dev/blog/using-perfetto-with-juce-for-dsp-and-ui-performance-tuning/)
+
+## License
+
+By contributing, you agree that your contributions will be licensed under:
+
+- **Source code**: GPL-3.0 (for plugdata-specific code)
+- **Compiled application**: AGPL-3.0 (due to JUCE framework)
+
+Third-party components retain their original licenses.
+
+## Credits
+
+plugdata is built on the work of many contributors and projects:
+
+### Core Projects
+- **Pure Data** by Miller Puckette and others
+- **libpd** by Peter Brinkmann, Dan Wilcox, and others
+- **JUCE** by Raw Material Software Ltd.
+- **Camomile** by Pierre Guillot (inspiration)
+
+### External Libraries
+- **ELSE** by Alexandre Torres Porres
+- **Cyclone** by Krzysztof Czaja, Hans-Christoph Steiner, Fred Jan Kraan, Alexandre Torres Porres, Derek Kwan, Matt Barber, and others
+- **pd-lua** by Claude Heiland-Allen, Albert Graef, and others
+- **Heavy/hvcc** originally by Enzien Audio, maintained by Wasted Audio
+
+### Design
+- Logo designed by [Joshua A.C. Newman](https://glyphpress.com/talk/)
+- Logo executed by [Bas de Bruin](https://www.bdebruin.nl/)
+- **Inter font** by Rasmus Andersson
+
+### Corporate Sponsors
+- [Gig Performer](https://gigperformer.com/)
+- [JetBrains Open Source Support](https://jb.gg/OpenSourceSupport)
+
+## Getting Help
+
+If you need help with contributions:
+
+- **Discord**: Join [discord.gg/eT2RxdF9Nq](https://discord.gg/eT2RxdF9Nq)
+- **GitHub Discussions**: Ask questions at [github.com/plugdata-team/plugdata/discussions](https://github.com/plugdata-team/plugdata/discussions)
+- **Email**: Contact maintainers at timschoen123@gmail.com
+
+Thank you for contributing to plugdata!

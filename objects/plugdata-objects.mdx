@@ -1,0 +1,502 @@
+---
+title: plugdata Objects
+description: DAW integration objects for automation, playhead, and plugin features
+---
+
+plugindata provides specialized objects for integrating Pure Data patches with DAW environments. These objects only work in the plugin version of plugdata and enable features like automation, tempo sync, and session state management.
+
+## Overview
+
+The plugdata-specific objects bridge Pure Data with modern DAW workflows:
+
+- **[param]** - Create and control DAW automation parameters
+- **[playhead]** - Receive DAW transport and timing information
+- **[plugin_latency]** - Report processing latency for compensation
+- **[daw_storage]** - Store persistent data in DAW session state
+
+<Note>
+These objects only function in the plugin version of plugdata (VST3, AU, LV2, CLAP). They will not work in the standalone application.
+</Note>
+
+## DAW Automation
+
+### [param]
+
+**Create and control DAW automation parameters**
+
+The `[param]` object sends and receives automation parameters to and from the DAW. Before using it, you must create an automation parameter in the plugdata sidebar.
+
+#### Syntax
+
+```
+[param <name> <auto-mode>]
+```
+
+#### Arguments
+
+<ParamField path="name" type="symbol" required>
+  Parameter name - must match a parameter created in the sidebar
+</ParamField>
+
+<ParamField path="auto-mode" type="float" default="0">
+  When set to `1`, automatically handles change state when interacting with connected GUI objects (sliders, number boxes, etc.)
+</ParamField>
+
+#### Inlets
+
+<Accordion title="Inlet 1: Parameter Value">
+  **Type:** `float`
+  
+  Set the DAW parameter value. This will update the automation in your DAW when recording.
+</Accordion>
+
+<Accordion title="Inlet 2: Change State">
+  **Type:** `float`
+  
+  Inform the DAW about parameter change state:
+  - `0` - Reading (not being changed by user)
+  - `1` - Writing (actively being changed)
+  
+  This enables touch automation modes and proper automation recording.
+</Accordion>
+
+#### Outlets
+
+<Accordion title="Outlet 1: Parameter Value">
+  **Type:** `float`
+  
+  Outputs the current parameter value received from the DAW automation.
+</Accordion>
+
+#### Messages
+
+<ResponseField name="create" type="message">
+  Activate the automation parameter (creates it if it doesn't exist)
+</ResponseField>
+
+<ResponseField name="range" type="message">
+  **Syntax:** `range <min> <max>`
+  
+  Set the parameter's minimum and maximum range values.
+</ResponseField>
+
+<ResponseField name="mode" type="message">
+  **Syntax:** `mode <mode-number>`
+  
+  Set parameter scaling mode:
+  - `1` - Float (linear)
+  - `2` - Integer (stepped)
+  - `3` - Logarithmic
+  - `4` - Exponential
+</ResponseField>
+
+#### Example Usage
+
+```pd
+// Create a filter cutoff parameter with linear range
+[loadbang]
+|
+[range 20 20000, mode 3(  // Logarithmic scaling
+|
+[param filter_cutoff 1]  // Auto-mode enabled
+|
+[snapshot~]
+|
+[osc~]
+```
+
+#### Workflow
+
+1. **Create Parameter in Sidebar**
+   - Open the Parameters panel in plugdata
+   - Add a new parameter with a unique name
+   - Set range and scaling options
+
+2. **Connect in Patch**
+   - Create `[param <name>]` object matching sidebar name
+   - Connect to controls (sliders, number boxes)
+   - Enable auto-mode for GUI interaction
+
+3. **Use in DAW**
+   - The parameter appears in your DAW's automation list
+   - Record automation by adjusting controls
+   - Playback automation drives the parameter
+
+---
+
+## DAW Transport
+
+### [playhead]
+
+**Receive DAW playhead and transport information**
+
+The `[playhead]` object outputs comprehensive timing and transport information from the DAW, including play state, tempo, time signature, and position in multiple formats.
+
+#### Syntax
+
+```
+[playhead]
+```
+
+#### Arguments
+
+None.
+
+#### Inlets
+
+None - this object automatically receives updates from the DAW.
+
+#### Outlets
+
+The playhead object has 9 outlets providing different timing information:
+
+<Accordion title="Outlet 1: Playing State">
+  **Type:** `float`
+  
+  - `1` if DAW is playing
+  - `0` if stopped
+</Accordion>
+
+<Accordion title="Outlet 2: Recording State">
+  **Type:** `float`
+  
+  - `1` if DAW is recording
+  - `0` if not recording
+</Accordion>
+
+<Accordion title="Outlet 3: Loop Information">
+  **Type:** `list` (3 floats)
+  
+  - First value: `1` if looping, `0` otherwise
+  - Second value: Loop start position
+  - Third value: Loop end position
+  - All zeros when not looping
+</Accordion>
+
+<Accordion title="Outlet 4: Edit Time">
+  **Type:** `float`
+  
+  Current edit/cursor position in the DAW timeline
+</Accordion>
+
+<Accordion title="Outlet 5: Frame Rate">
+  **Type:** `float`
+  
+  Video frame rate (for video sync)
+  - Common values: 24, 25, 29.97, 30, 60
+</Accordion>
+
+<Accordion title="Outlet 6: BPM">
+  **Type:** `float`
+  
+  Current tempo in beats per minute
+</Accordion>
+
+<Accordion title="Outlet 7: Last Bar">
+  **Type:** `float`
+  
+  Position of the most recent bar start
+</Accordion>
+
+<Accordion title="Outlet 8: Time Signature">
+  **Type:** `list`
+  
+  Current time signature (e.g., `4 4` for 4/4 time)
+</Accordion>
+
+<Accordion title="Outlet 9: Position">
+  **Type:** `list` (3 floats)
+  
+  Current playhead position in three formats:
+  - PPQ (Pulses Per Quarter note) position
+  - Time in samples
+  - Time in seconds
+</Accordion>
+
+#### Example Usage
+
+**Tempo-Synced Metronome**
+
+```pd
+[playhead]
+|      \
+|       \
+|        [unpack f f f]
+|         |
+|        [/ 1000]  // Convert to seconds
+|         |
+[select 1] [metro]
+|           |
+[bang~]    [bang]
+```
+
+**Beat Counter**
+
+```pd
+[playhead]
+     |
+     |  (outlet 6: BPM)
+     |
+[f]  [t b f]
+|    |
+[60000] [/]  // ms per beat
+|
+[metro]
+|
+[counter]
+|
+[% 4]  // Count 1-4
+```
+
+---
+
+## Plugin Configuration
+
+### [plugin_latency]
+
+**Report plugin processing latency to DAW**
+
+The `[plugin_latency]` object informs the DAW about the processing delay introduced by your patch, enabling automatic delay compensation to keep tracks in sync.
+
+#### Syntax
+
+```
+[plugin_latency]
+```
+
+#### Arguments
+
+None.
+
+#### Inlets
+
+<Accordion title="Inlet 1: Latency Value">
+  **Type:** `float`
+  
+  Set the latency compensation value in samples. The DAW will automatically compensate for this delay across all tracks.
+</Accordion>
+
+#### Outlets
+
+None.
+
+#### When to Use
+
+Report latency when your patch includes:
+- **Look-ahead processing** - FFT analysis, spectral effects
+- **Large filter delays** - High-order IIR filters
+- **Buffering** - Custom delay lines for processing
+
+#### Example Usage
+
+**FFT Processing with Latency Compensation**
+
+```pd
+// FFT requires one block of look-ahead
+[block~ 2048]  // 2048 sample FFT
+|
+[2048(  // Report latency
+|
+[plugin_latency]
+
+// Your FFT processing here
+[rfft~]
+[rifft~]
+```
+
+**Calculate Latency from Block Size**
+
+```pd
+[loadbang]
+|
+[; pd dsp 1(
+|
+[samplerate~]
+|      \
+|       [2048(  // Block size
+|        |
+[/]     // Calculate actual ms
+|
+[* 1000]
+|
+[plugin_latency]
+```
+
+<Warning>
+Only set latency during patch initialization (with `[loadbang]`). Changing latency during playback can cause audio glitches.
+</Warning>
+
+---
+
+## Session State
+
+### [daw_storage]
+
+**Store persistent data in DAW session state**
+
+The `[daw_storage]` object allows you to save arrays, lists, symbols, and other data as part of the DAW's session/project file. This data persists between sessions and is saved with your DAW project.
+
+<Note>
+While `[daw_storage]` is documented in the ELSE library folder, it is a plugdata-specific object that only functions in the plugin version.
+</Note>
+
+#### Syntax
+
+```
+[daw_storage <unique-id>]
+```
+
+#### Arguments
+
+<ParamField path="unique-id" type="symbol" required>
+  Unique identifier for this storage instance. Must be unique within your patch to avoid data conflicts.
+</ParamField>
+
+#### Inlets
+
+<Accordion title="Inlet 1: Data to Store">
+  **Type:** `anything` (float, symbol, list, array)
+  
+  Send any data to be stored in the DAW session. This data will be saved with the project file.
+</Accordion>
+
+#### Outlets
+
+<Accordion title="Outlet 1: Stored Data">
+  **Type:** `anything`
+  
+  Outputs the last stored data when the patch loads. This allows you to restore state from the previous session.
+</Accordion>
+
+#### Example Usage
+
+**Save Preset Data**
+
+```pd
+// On patch load, restore last preset
+[loadbang]
+|
+[daw_storage my_preset]
+|
+[route list]
+|
+[unpack f f f f]
+|  |  |  |
+// Restore parameter values
+```
+
+**Store Array Contents**
+
+```pd
+// Save wavetable data
+[array get my_wavetable]
+|
+[daw_storage wavetable_data]
+
+// On load, restore it
+[loadbang]
+|
+[daw_storage wavetable_data]
+|
+[array set my_wavetable]
+```
+
+**Save UI State**
+
+```pd
+// Store toggle states and values
+[pack f f f f]
+|
+[daw_storage ui_state]
+
+// Restore on load
+[loadbang]
+|
+[daw_storage ui_state]
+|
+[unpack f f f f]
+```
+
+#### Use Cases
+
+- **Preset Management** - Save and recall parameter combinations
+- **Sequence Data** - Store sequencer patterns and note data  
+- **Wavetables** - Persist custom waveform data
+- **UI State** - Remember control positions and settings
+- **Sample Data** - Cache processed audio or analysis results
+
+#### Best Practices
+
+1. **Use Unique IDs** - Each storage instance needs a distinct identifier
+2. **Initialize on Load** - Use `[loadbang]` to retrieve stored data
+3. **Limit Data Size** - Large amounts of data can slow project loading
+4. **Version Your Data** - Include version numbers if data format may change
+
+```pd
+// Good practice: versioned storage
+[pack 1 f f f]  // Version 1 + 3 parameters
+|
+[daw_storage my_data_v1]
+```
+
+---
+
+## Integration Workflow
+
+Combining plugdata objects for complete DAW integration:
+
+### Complete Plugin Template
+
+```pd
+// 1. Restore session state
+[loadbang]
+|
+[daw_storage patch_state]
+|
+[unpack f f]
+|        |
+|        |  // 2. Create automation parameters
+|        |  [param filter_freq 1]
+|        |  |
+|        \  /
+|         \/
+|         /\
+|        /  \
+//  3. Use playhead for tempo sync
+[playhead]
+     |
+     (outlet 6: BPM)
+     |
+[expr 60000 / $f1]  // ms per beat
+|
+[metro]
+
+// 4. Report any processing latency
+[2048(
+|
+[plugin_latency]
+```
+
+### Testing in DAW
+
+1. **Load plugin** in your DAW
+2. **Create automation** - Parameters appear in automation list
+3. **Test transport sync** - Verify tempo and playhead tracking
+4. **Save and reload project** - Confirm state persistence
+5. **Check latency** - Ensure tracks remain in sync
+
+### Debugging
+
+If objects don't work:
+- Verify you're using the **plugin version** (not standalone)
+- Check that parameters are **created in sidebar** before using [param]
+- Ensure **unique IDs** for all [daw_storage] instances
+- Look for **console errors** in the plugdata window
+
+---
+
+## Related Documentation
+
+- [DAW Integration](/concepts/daw-integration) - How plugdata works in your DAW
+- [Automation Parameters](/guides/automation-parameters) - Complete automation workflow guide
+- [ELSE Library](/objects/else-library) - Additional ELSE objects used with plugdata features

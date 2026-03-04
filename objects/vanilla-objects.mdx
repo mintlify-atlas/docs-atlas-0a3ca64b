@@ -1,0 +1,551 @@
+---
+title: Vanilla Objects
+description: Core Pure Data objects available in all distributions - 290+ essential building blocks
+---
+
+Vanilla objects are the core Pure Data objects included in every PD distribution. They provide the fundamental building blocks for patching and are the most portable objects across different Pure Data implementations.
+
+## Overview
+
+Vanilla PD includes approximately 290 objects covering audio synthesis, control flow, data manipulation, MIDI, and more. These objects form the foundation of Pure Data and are essential knowledge for every user.
+
+### Why Use Vanilla?
+
+✅ **Universal compatibility** - Works in Pd-vanilla, Pd-extended, plugdata, and all forks  
+✅ **Rock-solid stability** - Decades of testing and refinement  
+✅ **Well-documented** - Extensive documentation and tutorials  
+✅ **Lightweight** - Minimal CPU overhead  
+✅ **Portable** - Patches work everywhere without external dependencies
+
+<Tip>
+For maximum portability, build patches primarily with vanilla objects and only add externals (ELSE, Cyclone) when specific features are needed.
+</Tip>
+
+## Object Categories
+
+<CardGroup cols={2}>
+  <Card title="Signal Generators" icon="wave-sine">
+    Basic oscillators and audio sources
+  </Card>
+  <Card title="Signal Math" icon="calculator">
+    Audio-rate mathematical operations
+  </Card>
+  <Card title="Filters" icon="sliders">
+    Audio filtering objects
+  </Card>
+  <Card title="Control Flow" icon="code-branch">
+    Logic, routing, and timing
+  </Card>
+  <Card title="Data Math" icon="function">
+    Control-rate mathematical operations
+  </Card>
+  <Card title="MIDI" icon="music">
+    MIDI input, output, and processing
+  </Card>
+  <Card title="Arrays & Tables" icon="table">
+    Data storage and manipulation
+  </Card>
+  <Card title="Data Structures" icon="database">
+    Lists, symbols, and messages
+  </Card>
+</CardGroup>
+
+## Essential Objects Everyone Should Know
+
+These are the fundamental objects every Pure Data user must understand:
+
+### Core Building Blocks
+
+<AccordionGroup>
+  <Accordion title="Basic Objects">
+    **[bang]** / **[bng]** - Trigger an event
+    
+    **[float]** / **[f]** - Store and output a number
+    
+    **[int]** / **[i]** - Store and output an integer
+    
+    **[symbol]** - Store and output a symbol/text
+    
+    **[send]** / **[s]** - Send messages wirelessly
+    
+    **[receive]** / **[r]** - Receive wireless messages
+    
+    **[print]** - Print messages to console
+    
+    **[loadbang]** - Send bang when patch loads
+  </Accordion>
+
+  <Accordion title="Control Flow">
+    **[metro]** - Send periodic bangs (metronome)
+    
+    **[delay]** / **[del]** - Delay a message
+    
+    **[trigger]** / **[t]** - Convert and send to multiple outlets
+    
+    **[select]** / **[sel]** - Match and route specific values
+    
+    **[route]** - Route messages by first element
+    
+    **[spigot]** - Gate messages on/off
+    
+    **[moses]** - Split numbers by threshold
+    
+    **[until]** - Loop until condition met
+  </Accordion>
+
+  <Accordion title="Math & Logic">
+    `[+]`, `[-]`, `[*]`, `[/]` - Basic arithmetic
+    
+    `[>]`, `[<]`, `[>=]`, `[<=]`, `[==]`, `[!=]` - Comparisons
+    
+    `[&]`, `[|]`, `[&&]`, `[||]` - Logical operations
+    
+    `[mod]`, `[div]` - Modulo and integer division
+    
+    `[pow]` - Exponentiation
+    
+    `[abs]` - Absolute value
+    
+    `[random]` - Random integers
+  </Accordion>
+
+  <Accordion title="Lists & Data">
+    **[pack]** - Combine multiple values into a list
+    
+    **[unpack]** - Split a list into separate values
+    
+    **[list]** - List operations
+    
+    **[list append]** - Append to list
+    
+    **[list split]** - Split list at index
+    
+    **[list length]** - Get list length
+  </Accordion>
+</AccordionGroup>
+
+## Audio Objects
+
+### Signal Generators
+
+<AccordionGroup>
+  <Accordion title="Oscillators">
+    **[osc~]** - Cosine wave oscillator
+    - Inlets: frequency (signal/float), phase reset (0-1)
+    - Outlets: cosine wave (-1 to 1)
+    - Example: `[osc~ 440]` for A440 sine wave
+    
+    **[phasor~]** - Sawtooth/ramp oscillator
+    - Outputs 0-1 ramp, useful for wavetable reading
+    - Inlets: frequency, phase reset
+    - Example: `[phasor~ 1]` for 1Hz ramp
+    
+    **[cos~]** - Cosine of signal (for waveshaping)
+    - Converts input range to cosine output
+    - Useful for wavetable oscillators
+  </Accordion>
+
+  <Accordion title="Noise & Audio I/O">
+    **[noise~]** - White noise generator
+    - No inlets, outputs random values -1 to 1
+    
+    **[adc~]** - Audio input (analog-to-digital)
+    - Arguments: channel numbers (e.g., `[adc~ 1 2]`)
+    
+    **[dac~]** - Audio output (digital-to-analog)
+    - Arguments: channel numbers (e.g., `[dac~ 1 2]`)
+    - No output needed, connect signals to inlets
+  </Accordion>
+
+  <Accordion title="Sample Playback">
+    **[tabread4~]** - 4-point interpolated table reading
+    - Best for audio sample playback
+    - Inlet: read position (use [phasor~] for playback)
+    
+    **[tabplay~]** - Play array as audio
+    - Inlet: bang to start, number for sample count
+    
+    **[tabwrite~]** - Record audio to array
+    - Inlet: signal to record, bang/number to start
+  </Accordion>
+</AccordionGroup>
+
+### Signal Processing
+
+<AccordionGroup>
+  <Accordion title="Filters">
+    **[lop~]** - One-pole lowpass filter
+    - Arguments/inlet: cutoff frequency in Hz
+    - Simple, smooth lowpass
+    
+    **[hip~]** - One-pole highpass filter
+    - Arguments/inlet: cutoff frequency in Hz
+    
+    **[bp~]** - Bandpass filter
+    - Arguments: center frequency, Q factor
+    
+    **[vcf~]** - Voltage-controlled filter
+    - Classic resonant lowpass (Moog-style)
+    - Inlets: signal, center frequency, Q
+  </Accordion>
+
+  <Accordion title="Delays & Envelopes">
+    **[delwrite~]** / **[delread~]** - Delay line read/write
+    - `[delwrite~ name 1000]` - Create 1000ms buffer
+    - `[delread~ name 500]` - Read at 500ms delay
+    
+    **[vd~]** - Variable delay reader
+    - For time-varying delays (chorus, flanger)
+    
+    **[line~]** - Linear ramp generator
+    - Message: `[target_value time_in_ms(`
+    - Essential for envelopes and smooth changes
+    
+    **[vline~]** - Multi-segment line generator
+    - More precise than [line~], for complex envelopes
+  </Accordion>
+
+  <Accordion title="Signal Math">
+    **[+~]**, **[-~]**, **[*~]**, **[/~]** - Audio-rate arithmetic
+    - Accept signals or floats
+    - Example: `[*~ 0.5]` for -6dB attenuation
+    
+    **[clip~]** - Limit signal range
+    - Arguments: low, high (default: -1, 1)
+    
+    **[min~]**, **[max~]** - Minimum/maximum of signals
+    
+    **[abs~]** - Absolute value of signal
+  </Accordion>
+
+  <Accordion title="Analysis">
+    **[env~]** - Envelope follower
+    - Tracks amplitude of input signal
+    - Argument: window size in samples
+    
+    **[snapshot~]** - Sample signal value at control rate
+    - Inlet: bang to sample, metro for periodic sampling
+    
+    **[fft~]**, **[ifft~]** - Fast Fourier Transform
+    - For spectral processing
+    - Use with [rfft~] and [rifft~] for real signals
+  </Accordion>
+</AccordionGroup>
+
+### DSP Control
+
+<AccordionGroup>
+  <Accordion title="Audio Settings">
+    **[block~]** - Set block size and overlap
+    - Arguments: block size, overlap factor
+    - Example: `[block~ 4096 4]` for FFT processing
+    
+    **[switch~]** - Turn DSP on/off for subpatch
+    - Inlet: 1 to enable, 0 to disable
+    - Saves CPU by disabling unused processing
+    
+    **[samplerate~]** - Output current sample rate
+    - Useful for frequency calculations
+  </Accordion>
+
+  <Accordion title="Signal Conversion">
+    **[sig~]** - Convert float to signal
+    - Example: `[sig~ 440]` creates constant 440 signal
+    
+    **[mtof]** / **[ftom]** - MIDI to frequency conversion
+    - `[mtof 69]` outputs 440 (A4)
+    - `[ftom 440]` outputs 69 (A4 MIDI note)
+    
+    **[dbtorms]** / **[rmstodb]** - Decibel conversions
+    - Convert between dB and RMS amplitude
+  </Accordion>
+</AccordionGroup>
+
+## Control Objects
+
+### Timing & Clocks
+
+<AccordionGroup>
+  <Accordion title="Metronomes & Delays">
+    **[metro]** - Metronome, sends periodic bangs
+    - Arguments: interval in ms, optional tempo scaling
+    - Inlets: on/off, interval
+    - Example: `[metro 1000]` sends bang every second
+    
+    **[delay]** / **[del]** - Delay a message
+    - Arguments: delay time in ms
+    - Inlets: message to delay, delay time
+    - Example: `[delay 500]` delays by 500ms
+    
+    **[pipe]** - Delay messages with values
+    - Like [delay] but can delay different messages separately
+    
+    **[timer]** - Measure time between events
+    - Left inlet starts, right inlet stops and outputs time
+  </Accordion>
+</AccordionGroup>
+
+### Routing & Logic
+
+<AccordionGroup>
+  <Accordion title="Message Routing">
+    **[trigger]** / **[t]** - Trigger multiple outputs
+    - Arguments: output types (f=float, b=bang, s=symbol, l=list, a=anything)
+    - Example: `[t b f f]` - bang, then two floats
+    - RIGHT TO LEFT execution order
+    
+    **[select]** / **[sel]** - Match specific values
+    - Arguments: values to match
+    - Example: `[select 0 1 2]` - 3 outlets + 1 default
+    
+    **[route]** - Route by first element
+    - Example: `[route pitch velocity]` routes based on selector
+    
+    **[spigot]** - Message gate
+    - Right inlet: 1=open, 0=closed
+    
+    **[moses]** - Split numbers by threshold
+    - Argument: threshold value
+    - Left outlet: below threshold, right: at or above
+  </Accordion>
+
+  <Accordion title="Flow Control">
+    **[until]** - Loop until stopped
+    - Inlet: number of iterations or bang for infinite
+    - Send to right inlet to stop
+    
+    **[change]** - Only output when value changes
+    - Filters out repeated identical values
+    
+    **[speedlim]** - Limit message rate
+    - Argument: minimum interval in ms
+  </Accordion>
+</AccordionGroup>
+
+### Data Manipulation
+
+<AccordionGroup>
+  <Accordion title="Lists">
+    **[pack]** - Combine values into list
+    - Arguments: types and initial values
+    - Example: `[pack f f f]` - pack 3 floats
+    
+    **[unpack]** - Split list into values
+    - Example: `[unpack f f f]` - unpack 3 floats
+    
+    **[list]** - List operations
+    - Subcommands: append, prepend, split, trim, length
+    
+    **[list append]** - Append to existing list
+    
+    **[list split]** - Split list at index
+    
+    **[list length]** - Output list length
+  </Accordion>
+
+  <Accordion title="Text & Symbols">
+    **[symbol]** - Store symbol/text
+    - Like [float] but for text
+    
+    **[makefilename]** - Create formatted symbol
+    - Example: `[makefilename patch-%d]` creates "patch-1", "patch-2", etc.
+    
+    **[text]** - Text storage and manipulation
+    - Multi-line text data structure
+  </Accordion>
+</AccordionGroup>
+
+## MIDI Objects
+
+<AccordionGroup>
+  <Accordion title="MIDI Input">
+    **[notein]** - MIDI note input
+    - Outlets: pitch, velocity, channel
+    
+    **[ctlin]** - MIDI controller input
+    - Outlets: value, controller number, channel
+    
+    **[pgmin]** - Program change input
+    
+    **[bendin]** - Pitch bend input
+    
+    **[touchin]** - Aftertouch input
+    
+    **[midiin]** - Raw MIDI input
+  </Accordion>
+
+  <Accordion title="MIDI Output">
+    **[noteout]** - MIDI note output
+    - Inlets: pitch, velocity, channel
+    
+    **[ctlout]** - MIDI controller output
+    - Inlets: value, controller number, channel
+    
+    **[pgmout]** - Program change output
+    
+    **[bendout]** - Pitch bend output
+    
+    **[touchout]** - Aftertouch output
+    
+    **[midiout]** - Raw MIDI output
+  </Accordion>
+
+  <Accordion title="MIDI Utilities">
+    **[makenote]** - Generate note on/off pairs
+    - Inlets: pitch, velocity, duration
+    - Automatically sends note-off after duration
+    
+    **[stripnote]** - Remove note-offs from stream
+    - Only passes note-on messages
+  </Accordion>
+</AccordionGroup>
+
+## Arrays & Tables
+
+<AccordionGroup>
+  <Accordion title="Array Creation & Access">
+    **[array]** - Create named array
+    - GUI object for visualization and editing
+    - Right-click to set size and properties
+    
+    **[table]** - Create table (non-visual array)
+    - Like [array] but without graphical display
+    
+    **[tabread]** - Read from array/table
+    - Control-rate, instant reading
+    
+    **[tabread4]** - 4-point interpolated reading
+    - Control-rate with interpolation
+    
+    **[tabwrite]** - Write to array/table
+    - Control-rate, instant writing
+  </Accordion>
+
+  <Accordion title="Array Operations">
+    **[arraysize]** - Get/set array size
+    
+    **[array get]** - Get entire array as list
+    
+    **[array set]** - Set entire array from list
+    
+    **[array sum]** - Sum all values
+    
+    **[array max]** / **[array min]** - Find max/min value
+    
+    **[array random]** - Fill with random values
+    
+    **[array quantile]** - Statistical quantiles
+  </Accordion>
+</AccordionGroup>
+
+## Subpatches & Abstraction
+
+<AccordionGroup>
+  <Accordion title="Encapsulation">
+    **[pd subpatch]** - Create subpatch
+    - Organize complex patches
+    - Click to open subpatch window
+    
+    **[inlet]**, **[outlet]** - Subpatch I/O
+    - Create inlets/outlets for subpatches and abstractions
+    
+    **[inlet~]**, **[outlet~]** - Audio-rate I/O
+    - For signal connections
+    
+    **[clone]** - Create multiple instances
+    - Efficient for polyphony
+    - Example: `[clone my-voice 8]` creates 8 voices
+  </Accordion>
+
+  <Accordion title="Arguments & Variables">
+    **$1, $2, $3...** - Arguments passed to abstraction
+    - In abstraction, `$1` is first creation argument
+    - Example: Create `[my-osc 440]`, inside use `[osc~ $1]`
+    
+    **$0** - Unique ID for each abstraction instance
+    - Useful for unique send/receive names
+    - Example: `[s $0-output]` creates unique sender
+  </Accordion>
+</AccordionGroup>
+
+## Message Formatting
+
+<AccordionGroup>
+  <Accordion title="Message Boxes & Construction">
+    **[message]** / **[msg]** - Message box
+    - GUI box for sending preset messages
+    - Use $1, $2 for substitution
+    
+    **[;]** - Semicolon for multiple messages
+    - Example: `[; pd dsp 1; metro 1000(`
+    
+    **[,]** - Comma for delayed messages
+    - Example: `[1, 0 1000(` - send 1 now, 0 after 1000ms
+  </Accordion>
+</AccordionGroup>
+
+## Special Objects
+
+<AccordionGroup>
+  <Accordion title="System & Initialization">
+    **[loadbang]** - Bang when patch loads
+    - Essential for initialization
+    - Configure with delay options
+    
+    **[declare]** - Set search paths and preferences
+    - Example: `[declare -path ../abstractions]`
+    
+    **[pd~]** - Subprocess for parallel DSP
+    - Run subpatch in separate process/thread
+  </Accordion>
+
+  <Accordion title="Communication">
+    **[send]** / **[s]** - Wireless message sender
+    - Example: `[s global-tempo]`
+    
+    **[receive]** / **[r]** - Wireless message receiver
+    - Example: `[r global-tempo]`
+    
+    **[send~]** / **[receive~]** - Audio wireless (local scope)
+    - Within same window only
+    
+    **[throw~]** / **[catch~]** - Audio summing bus
+    - [throw~] sends, [catch~] receives and sums all senders
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+### Performance
+
+- Use **[block~]** to optimize FFT and heavy processing
+- Turn off unused DSP with **[switch~]**
+- Prefer **[tabread4~]** over **[tabread~]** for audio (better quality)
+- Use **[change]** to filter redundant updates
+
+### Compatibility
+
+- Vanilla objects work in **all** Pure Data distributions
+- Avoid externals when vanilla can do the job
+- Use **[declare]** to specify paths for portability
+
+### Code Organization
+
+- Break complex patches into **subpatches** and **abstractions**
+- Use **send/receive** sparingly (hard to debug)
+- Use **$0** for unique identifiers in abstractions
+- Comment with **[comment]** or regular comments
+
+## Learning Resources
+
+- **Help patches** - Right-click any object → Help
+- **Pure Data Manual** - Comprehensive reference (Help → Pd Manual)
+- **FLOSS Manuals** - Free online Pure Data book
+- **Miller Puckette's examples** - Included with Pd
+
+## Related Documentation
+
+- [ELSE Library](/objects/else-library) - Extended objects for plugdata
+- [Cyclone Library](/objects/cyclone-library) - Max/MSP compatibility
+- [Objects Overview](/objects/overview) - All available libraries
+- [Getting Started](/introduction) - Begin learning Pure Data

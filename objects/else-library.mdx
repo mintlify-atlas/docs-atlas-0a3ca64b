@@ -1,0 +1,439 @@
+---
+title: ELSE Library
+description: Comprehensive external library by Alexandre Torres Porres with 570+ objects
+---
+
+ELSE (EL Locus Solus) is a massive library of over 570 Pure Data objects created and maintained by Alexandre Torres Porres. It's the most comprehensive third-party library for Pure Data and is fully integrated into plugdata.
+
+## Overview
+
+The ELSE library provides a modern, well-documented alternative to many vanilla and Cyclone objects, with enhanced functionality and consistent design philosophy.
+
+### Key Features
+
+- **570+ objects** covering synthesis, audio processing, control, and utilities
+- **Bandlimited oscillators** for alias-free audio generation
+- **Advanced filters** including SVF, parametric EQ, and modeled filters
+- **Rich modulation** with LFOs, envelopes, and sequencers
+- **MIDI utilities** for note processing and generation
+- **Live coding** tools for algorithmic composition
+- **Comprehensive help patches** for every object
+
+<Note>
+When both ELSE and Cyclone provide the same object name, ELSE is generally preferred for its richer features and better documentation.
+</Note>
+
+## Object Categories
+
+ELSE objects are organized into functional categories:
+
+<CardGroup cols={2}>
+  <Card title="Signal Generators" icon="wave-sine">
+    Oscillators, noise generators, and signal sources
+  </Card>
+  <Card title="Filters & EQ" icon="sliders">
+    Lowpass, highpass, bandpass, shelving, and parametric filters
+  </Card>
+  <Card title="Effects" icon="wand-magic-sparkles">
+    Reverb, delay, distortion, chorus, flangers, and modulation
+  </Card>
+  <Card title="Envelopes" icon="chart-line">
+    ADSR, ASR, function generators, and envelope followers
+  </Card>
+  <Card title="Sequencers" icon="list-ol">
+    Step sequencers, pattern generators, and arpeggiators
+  </Card>
+  <Card title="MIDI" icon="music">
+    Note processing, MIDI utilities, and controllers
+  </Card>
+  <Card title="Data & Math" icon="calculator">
+    Mathematical operations, logic, and data manipulation
+  </Card>
+  <Card title="Analysis" icon="magnifying-glass-chart">
+    FFT, pitch detection, and signal analysis
+  </Card>
+</CardGroup>
+
+## Essential Objects
+
+Here are the most commonly used ELSE objects by category:
+
+### Signal Generators
+
+<AccordionGroup>
+  <Accordion title="Bandlimited Oscillators">
+    **bl.osc~** - Multi-waveform bandlimited oscillator
+    - Supports saw, square, triangle, impulse waveforms
+    - Adjustable number of partials
+    - Hard and soft sync modes
+    - MIDI frequency input option
+
+    **bl.saw~**, **bl.square~**, **bl.tri~** - Individual bandlimited waveforms
+    
+    **bl.saw2~**, **bl.imp~**, **bl.imp2~** - Specialized waveforms
+    
+    **bl.wavetable~** - Wavetable oscillator with multiple waveforms
+
+    These oscillators are **alias-free** and sound significantly better than vanilla [phasor~] for audio synthesis.
+  </Accordion>
+
+  <Accordion title="Noise Generators">
+    **brown~** - Brownian/brown noise
+    
+    **pink~** - Pink noise (1/f spectrum)
+    
+    **white~** - White noise
+    
+    **grey~** - Grey noise (psychoacoustically flat)
+    
+    **crackle~** - Chaotic noise generator
+    
+    **dust~**, **dust2~** - Random impulse generators
+  </Accordion>
+
+  <Accordion title="LFOs & Modulation">
+    **lfo** - Multi-waveform control-rate LFO
+    
+    **ramp~** - Audio-rate ramp/envelope generator
+    
+    **impulse~**, **impulse2~** - Precise impulse generators
+    
+    **sine~** - High-quality sine wave oscillator
+  </Accordion>
+</AccordionGroup>
+
+### Filters
+
+<AccordionGroup>
+  <Accordion title="Lowpass Filters">
+    **lowpass~** - Simple lowpass with resonance
+    
+    **lop~** - One-pole lowpass
+    
+    **lp.filt~** - Multi-mode lowpass filter
+    
+    **svf~** - State variable filter (LP mode)
+  </Accordion>
+
+  <Accordion title="Highpass Filters">
+    **highpass~** - Simple highpass with resonance
+    
+    **hip~** - One-pole highpass
+    
+    **hp.filt~** - Multi-mode highpass filter
+  </Accordion>
+
+  <Accordion title="Bandpass & Multi-Mode">
+    **bandpass~** - Bandpass filter
+    
+    **bandstop~** - Band-reject/notch filter
+    
+    **svf~** - State variable filter (LP/HP/BP/notch)
+    
+    **slew~**, **slew2~** - Slew rate limiters
+  </Accordion>
+
+  <Accordion title="EQ & Tone Control">
+    **eq~** - Parametric equalizer
+    
+    **highshelf~**, **lowshelf~** - Shelving filters
+    
+    **resonbank~**, **resonbank2~** - Resonant filter banks
+  </Accordion>
+</AccordionGroup>
+
+### Envelopes
+
+<AccordionGroup>
+  <Accordion title="Envelope Generators">
+    **adsr~** - Classic ADSR envelope (audio rate)
+    
+    **asr~** - ASR (Attack-Sustain-Release) envelope
+    
+    **envgen~** - Breakpoint function generator
+    
+    **function~** - Multi-segment envelope editor
+  </Accordion>
+
+  <Accordion title="Envelope Followers">
+    **envelope~** - Audio envelope follower
+    
+    **amp~** - Amplitude follower with smoothing
+    
+    **rms~** - RMS level calculator
+    
+    **peak~** - Peak level detector
+  </Accordion>
+</AccordionGroup>
+
+### Effects
+
+<AccordionGroup>
+  <Accordion title="Reverb">
+    **rev1~**, **rev2~**, **rev3~** - Different reverb algorithms
+    
+    **freerev~** - Freeverb implementation
+    
+    **allpass.rev~** - Allpass-based reverb
+  </Accordion>
+
+  <Accordion title="Delay & Echo">
+    **del~** - Simple delay line
+    
+    **fbdelay~** - Feedback delay
+    
+    **ping.pong~** - Stereo ping-pong delay
+    
+    **shdelay~** - Short delay for effects
+  </Accordion>
+
+  <Accordion title="Modulation Effects">
+    **chorus~** - Chorus effect
+    
+    **flanger~** - Flanger effect
+    
+    **phaser~** - Phaser effect
+    
+    **vibrato~** - Vibrato effect
+  </Accordion>
+
+  <Accordion title="Distortion & Dynamics">
+    **drive~** - Overdrive/distortion
+    
+    **crush~** - Bit crusher
+    
+    **downsample~** - Sample rate reduction
+    
+    **compress~** - Compressor
+    
+    **limit~** - Limiter
+  </Accordion>
+</AccordionGroup>
+
+### Sequencers & Pattern Generators
+
+<AccordionGroup>
+  <Accordion title="Step Sequencers">
+    **sequencer** - Multi-track step sequencer
+    
+    **sequencer~** - Audio-rate sequencer
+    
+    **stepped** - Value sequencer with GUI
+  </Accordion>
+
+  <Accordion title="Pattern Generation">
+    **euclid** - Euclidean rhythm generator
+    
+    **lfnoise** - Random stepped values
+    
+    **rampnoise~** - Interpolated random values
+    
+    **randpulse~**, **randpulse2~** - Random pulse trains
+  </Accordion>
+</AccordionGroup>
+
+### MIDI & Note Processing
+
+<AccordionGroup>
+  <Accordion title="Note Utilities">
+    **midi** - MIDI note input/output
+    
+    **noteout** - Formatted MIDI note output
+    
+    **notein** - MIDI note input
+    
+    **pgmin**, **pgmout** - Program change
+    
+    **ctlin**, **ctlout** - Control change
+  </Accordion>
+
+  <Accordion title="Note Processing">
+    **suspedal** - Sustain pedal handler
+    
+    **voices** - Voice allocation manager
+    
+    **mono** - Note to mono converter
+    
+    **retune** - MIDI note retuning
+  </Accordion>
+
+  <Accordion title="Conversion">
+    **mtof** - MIDI to frequency
+    
+    **ftom** - Frequency to MIDI
+    
+    **scale** - Scale/map values
+  </Accordion>
+</AccordionGroup>
+
+### Data & Math
+
+<AccordionGroup>
+  <Accordion title="Mathematical Operations">
+    **add**, **sub**, **mul**, **div** - Basic arithmetic
+    
+    **add~**, **sub~**, **mul~**, **div~** - Audio-rate math
+    
+    **ceil**, **floor**, **round**, **trunc** - Rounding
+    
+    **sin**, **cos**, **tan** - Trigonometry
+    
+    **log**, **exp**, **pow** - Exponential functions
+  </Accordion>
+
+  <Accordion title="Logic & Comparison">
+    **above**, **below** - Threshold detection
+    
+    **changed** - Detect value changes
+    
+    **gate** - Route signals based on condition
+    
+    **pick** - Select from multiple inputs
+  </Accordion>
+
+  <Accordion title="Random & Probability">
+    **rand.f**, **rand.i** - Random number generators
+    
+    **rand.seq** - Random sequence without repeats
+    
+    **randpulse** - Random pulse generator
+    
+    **prob** - Probability gate
+  </Accordion>
+</AccordionGroup>
+
+### Analysis
+
+<AccordionGroup>
+  <Accordion title="Pitch & Frequency">
+    **pitch~** - Pitch detection
+    
+    **pitch.track~** - Pitch tracking
+    
+    **zerocross~** - Zero-crossing detector
+  </Accordion>
+
+  <Accordion title="FFT & Spectral">
+    **fft~**, **ifft~** - Fast Fourier Transform
+    
+    **hann~** - Hanning window
+    
+    **bin.shift~** - Spectral bin shifter
+  </Accordion>
+</AccordionGroup>
+
+## Unique Features
+
+### Multi-Channel (MC) Support
+
+Many ELSE objects support multi-channel audio with `.mc~` versions:
+
+- **autofade.mc~** - Multi-channel crossfade
+- **mix.mc~** - Multi-channel mixer  
+- **merge.mc~**, **unmerge.mc~** - Channel merging/splitting
+
+### GUI Objects
+
+ELSE includes many objects with built-in GUI:
+
+- **slider2d** - 2D XY controller
+- **pad** - Multi-point touch controller
+- **keyboard** - Piano keyboard input
+- **pic** - Image display
+- **graph** - Function/array editor
+
+### Live Coding
+
+Objects designed for live coding and algorithmic composition:
+
+- **hot** - Hot inlet (always triggers output)
+- **args** - Access patch arguments
+- **dollsym** - Dollar symbol expansion
+- **message** - Formatted message box
+
+## Finding Objects
+
+With 570+ objects, finding the right one is important:
+
+### By Category in Object Browser
+
+1. Open object browser (`Cmd/Ctrl + Shift + N`)
+2. Filter by "ELSE" library
+3. Browse categories: Signal Generators, Filters, etc.
+
+### By Naming Convention
+
+- **~** suffix - Signal-rate objects
+- **No suffix** - Control-rate objects
+- **.mc~** suffix - Multi-channel versions
+- **bl.*** - Bandlimited generators
+
+### Search by Function
+
+Common search terms:
+- "filter" - All filter objects
+- "osc" - Oscillators
+- "env" - Envelopes
+- "random" - Random/stochastic objects
+- "midi" - MIDI-related objects
+
+## Documentation
+
+Every ELSE object has comprehensive help patches:
+
+1. **Right-click object** → "Help"
+2. **Press Cmd/Ctrl + H** with object selected
+3. Help patches include:
+   - Detailed description
+   - All inlet/outlet documentation  
+   - Argument explanations
+   - Practical examples
+   - Related objects
+
+<Tip>
+ELSE help patches are some of the best-documented in the Pure Data ecosystem. Always check them when learning a new object.
+</Tip>
+
+## ELSE vs. Vanilla vs. Cyclone
+
+### When to Use ELSE
+
+✅ **Choose ELSE when:**
+- You need bandlimited oscillators
+- You want built-in GUI controls
+- You need advanced filters or effects
+- Documentation and examples are important
+- Working exclusively in plugdata
+
+### When to Use Vanilla
+
+✅ **Choose Vanilla when:**
+- Maximum portability across PD distributions
+- Minimal external dependencies
+- Simple, well-understood behavior
+
+### When to Use Cyclone
+
+✅ **Choose Cyclone when:**
+- Porting patches from Max/MSP
+- Specific Max compatibility needed
+- ELSE doesn't have an equivalent
+
+## Performance Considerations
+
+- **Bandlimited oscillators** (bl.*~) use more CPU than vanilla oscillators
+- **Complex effects** (reverbs, FFT) can be CPU-intensive
+- **GUI objects** consume slightly more resources
+- Use **block~** to optimize DSP performance
+
+## External Resources
+
+- **ELSE Repository** - [github.com/porres/pd-else](https://github.com/porres/pd-else)
+- **Tutorial Patches** - Included in ELSE distribution
+- **Video Tutorials** - Available on Alexandre Torres Porres' YouTube channel
+
+## Related Documentation
+
+- [Vanilla Objects](/objects/vanilla-objects) - Core Pure Data objects
+- [Cyclone Library](/objects/cyclone-library) - Max/MSP compatibility
+- [Objects Overview](/objects/overview) - All available libraries

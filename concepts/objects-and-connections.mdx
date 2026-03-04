@@ -1,0 +1,616 @@
+---
+title: "Objects and Connections"
+description: "Deep dive into plugdata's object types, properties, and connection system"
+---
+
+## Object Architecture
+
+plugindata's object system is built on Pure Data's foundation but enhanced with modern UI features and improved visual feedback.
+
+### Object Lifecycle
+
+From `Object.cpp:35-69`, objects are created in two ways:
+
+**New Object Creation**:
+```cpp
+Object::Object(Canvas* parent, String const& name, Point<int> const position)
+    : cnv(parent)
+    , editor(parent->editor)
+{
+    setTopLeftPosition(position - Point<int>(margin, margin));
+    initialise();
+    
+    if (name.isEmpty()) {
+        setSize(58, height);  // Initial editor size
+    } else {
+        setType(name);  // Create with specific type
+    }
+}
+```
+
+**Existing Object Reference**:
+```cpp
+Object::Object(pd::WeakReference object, Canvas* parent)
+    : cnv(parent)
+    , editor(parent->editor)
+{
+    initialise();
+    setType("", object);  // Link to existing Pd object
+}
+```
+
+### Object Types
+
+#### 1. GUI Objects
+
+Interactive visual elements that extend Pure Data's standard objects:
+
+**Number Boxes**
+- Display and edit numeric values
+- Support mouse drag to adjust
+- Can have custom ranges and display formats
+
+**Sliders** (Horizontal/Vertical)
+- Visual parameter control
+- Linear or logarithmic scaling
+- Customizable colors and ranges
+
+**Toggle/Bang**
+- Binary on/off states
+- Momentary triggers
+- Visual feedback on activation
+
+**Canvas/VU Meters**
+- Visual displays
+- Real-time level monitoring
+- Customizable appearance
+
+From `Object.cpp:498-503`, GUI objects have special rendering:
+```cpp
+void Object::resized()
+{
+    setVisible(!((cnv->isGraph || cnv->presentationMode == var(true)) 
+        && gui && gui->hideInGraph()));
+    
+    if (gui) {
+        gui->setBounds(getLocalBounds().reduced(margin));
+    }
+}
+```
+
+#### 2. Audio Objects
+
+Signal processing objects (with `~` suffix):
+
+**Oscillators**
+- `[osc~]` - Sine wave oscillator
+- `[phasor~]` - Sawtooth/ramp oscillator  
+- `[noise~]` - White noise generator
+
+**Filters**
+- `[lop~]` - Low-pass filter
+- `[hip~]` - High-pass filter
+- `[bp~]` - Band-pass filter
+- `[vcf~]` - Voltage-controlled filter
+
+**Audio I/O**
+- `[adc~]` - Audio input (analog-to-digital converter)
+- `[dac~]` - Audio output (digital-to-analog converter)
+- `[readsf~]` - Read sound file
+- `[writesf~]` - Write sound file
+
+**Math Operations**
+- `[+~]`, `[-~]`, `[*~]`, `[/~]` - Arithmetic
+- `[clip~]` - Limit signal range
+- `[wrap~]` - Wrap signal values
+
+#### 3. Control Objects
+
+Message-based objects for logic and flow control:
+
+**Flow Control**
+- `[select]` / `[sel]` - Route based on value
+- `[route]` - Message routing by symbol
+- `[spigot]` - Gate messages on/off
+- `[moses]` - Split numbers by threshold
+
+**Timing**
+- `[metro]` - Metronome/clock
+- `[delay]` / `[del]` - Delayed bang
+- `[timer]` - Measure time between events
+- `[pipe]` - Delay messages with values
+
+**Math and Logic**
+- `[+]`, `[-]`, `[*]`, `[/]` - Arithmetic
+- `[>]`, `[<]`, `[==]` - Comparisons
+- `[&&]`, `[||]` - Logical operators
+- `[expr]` - Mathematical expressions
+
+**Data Structures**
+- `[list]` - List operations
+- `[array]` - Data arrays
+- `[table]` - Lookup tables
+- `[text]` - Text manipulation
+
+### Object Properties
+
+Every object has configurable properties accessible through the inspector:
+
+**Position and Size**
+```cpp
+// From Object.cpp:76-94
+Rectangle<int> Object::getObjectBounds() const
+{
+    return getBounds().reduced(margin) - cnv->canvasOrigin;
+}
+
+void Object::setObjectBounds(Rectangle<int> const bounds)
+{
+    setBounds(bounds.expanded(margin) + cnv->canvasOrigin);
+}
+```
+
+**Visual Properties**
+- Background color
+- Label text and position
+- Font and size
+- Send/receive symbols
+
+**Functional Properties**  
+- Value ranges (min/max)
+- Initial values
+- Send/receive names
+- Arguments
+
+## Iolets: Object Interfaces
+
+From `Iolet.h:12-65`, iolets are the connection points on objects:
+
+```cpp
+class Iolet final : public Component
+{
+public:
+    Object* object;
+    Canvas* cnv;
+    
+    uint16 ioletIdx;      // Index on parent object
+    bool isInlet : 1;      // Input vs output
+    bool isSignal : 1;     // Signal (~) vs message
+    bool isGemState : 1;   // GEM rendering chain
+    bool isTargeted : 1;   // Being connected
+};
+```
+
+### Iolet Types
+
+**Signal Iolets** (Audio Rate)
+- Process continuous audio streams
+- Identified by `~` in object name
+- Visually distinct (colored when enabled)
+- Sample-accurate timing
+
+**Message Iolets** (Control Rate)
+- Process discrete events
+- Handle numbers, symbols, lists
+- Event-driven execution
+
+**GEM Iolets**
+- Graphics rendering chain
+- Pass GEM state between objects
+- Special visual indicator
+
+### Iolet Layout
+
+From `Object.cpp:512-586`, iolet positioning is calculated:
+
+```cpp
+void Object::updateIoletGeometry()
+{
+    int maxIoletWidth = std::min(
+        (getWidth() - doubleMargin) / std::max<int>(numInputs, 1) - 4,
+        (getWidth() - doubleMargin) / std::max<int>(numOutputs, 1) - 4
+    );
+    
+    int ioletSize = PlugDataLook::getIoletSize();
+    ioletSize = std::max(std::min({ioletSize, maxIoletWidth, maxIoletHeight}), 10);
+    
+    // Two layout modes: vanilla (edges) or centered
+    if (PlugDataLook::getUseIoletSpacingEdge()) {
+        // Distribute iolets from edge to edge
+    } else {
+        // Center iolets with spacing
+    }
+}
+```
+
+**Layout Modes**:
+
+1. **Edge Spacing** (Vanilla style)
+   - Iolets placed at object corners
+   - Matches Pure Data vanilla appearance
+
+2. **Centered Spacing** (Default)
+   - Iolets distributed evenly
+   - Better visual balance
+   - Easier to connect
+
+### Iolet Tooltips
+
+From `Object.cpp:589-693`, tooltips are automatically populated:
+
+```cpp
+void Object::updateTooltips()
+{
+    auto const objectInfo = cnv->pd->objectLibrary->getObjectInfo(
+        gui->getTypeWithOriginPrefix());
+    
+    if (objectInfo.isValid()) {
+        // Set object tooltip from documentation
+        gui->setTooltip(objectInfo.getProperty("description").toString());
+        
+        // Parse iolet tooltips from pddp files
+        ioletTooltips = cnv->pd->objectLibrary->parseIoletTooltips(
+            objectInfo.getChildWithName("iolets"), 
+            gui->getText(), numInputs, numOutputs);
+    }
+}
+```
+
+Tooltips show:
+- Iolet purpose and accepted values
+- GEM state indicators
+- Signal vs message type
+
+## Connection System
+
+The connection system manages the visual and functional links between objects.
+
+### Connection Creation
+
+From `Connection.cpp:26-95`:
+
+```cpp
+Connection::Connection(Canvas* parent, Iolet* s, Iolet* e, t_outconnect* oc)
+    : inlet(s->isInlet ? s : e)
+    , outlet(s->isInlet ? e : s)
+    , inobj(inlet->object)
+    , outobj(outlet->object)
+    , cnv(parent)
+{
+    // Validate connection
+    if (!outlet || !inlet || outlet->isInlet == inlet->isInlet) {
+        jassertfalse;
+        return;
+    }
+    
+    // Determine cable type
+    if (outlet->isSignal) {
+        cableType = SignalCable;
+    } else if (outlet->isGemState) {
+        cableType = GemCable;
+    } else {
+        cableType = DataCable;
+    }
+    
+    // Create in Pd if needed
+    if (!oc) {
+        oc = parent->patch.createAndReturnConnection(
+            checkedOut, outIdx, checkedIn, inIdx);
+    }
+}
+```
+
+### Connection Types
+
+**Data Connections** (Message)
+- Control-rate messages
+- Discrete events and values
+- Black/base color (default)
+
+**Signal Connections** (Audio)
+- Audio-rate continuous signals  
+- Sample-accurate processing
+- Colored differently (configurable)
+- Multiple signal channels supported
+
+**GEM Connections**
+- Graphics rendering chain
+- Special visual treatment
+- Pass rendering state
+
+### Connection Paths
+
+plugindata supports multiple connection path styles:
+
+#### 1. Curved Paths (Default)
+
+From `Connection.cpp:879-932`, bezier curves for smooth appearance:
+
+```cpp
+Path Connection::getNonSegmentedPath(Point<float> const start, Point<float> const end)
+{
+    Path connectionPath;
+    connectionPath.startNewSubPath(start);
+    
+    if (!PlugDataLook::getUseStraightConnections()) {
+        float const width = std::max(start.x, end.x) - std::min(start.x, end.x);
+        float const height = std::max(start.y, end.y) - std::min(start.y, end.y);
+        
+        constexpr float maxShiftY = 20.f;
+        constexpr float maxShiftX = 20.f;
+        
+        float shiftY = std::min<float>(maxShiftY, max * 0.5);
+        Point<float> const ctrlPoint1 { start.x - shiftX, start.y + shiftY };
+        Point<float> const ctrlPoint2 { end.x + shiftX, end.y - shiftY };
+        
+        connectionPath.cubicTo(ctrlPoint1, ctrlPoint2, end);
+    }
+    
+    return connectionPath;
+}
+```
+
+#### 2. Segmented Paths  
+
+- Orthogonal (right-angle) routing
+- User-adjustable waypoints
+- Automatic path-finding algorithm
+- Saved with patch
+
+From `Connection.cpp:317-339`, segmented paths are serialized:
+
+```cpp
+void Connection::pushPathState(bool const force)
+{
+    t_symbol* newPathState;
+    if (segmented) {
+        MemoryOutputStream stream;
+        
+        for (auto const& point : currentPlan) {
+            stream.writeInt(point.x - outlet->getCanvasBounds().getCentre().x);
+            stream.writeInt(point.y - outlet->getCanvasBounds().getCentre().y);
+        }
+        
+        auto const base64 = stream.getMemoryBlock().toBase64Encoding();
+        newPathState = cnv->pd->generateSymbol(base64);
+    } else {
+        newPathState = cnv->pd->generateSymbol("empty");
+    }
+    
+    cnv->pathUpdater->pushPathState(this, newPathState);
+}
+```
+
+#### 3. Straight Lines
+
+- Direct point-to-point
+- Minimal visual overhead
+- Matches Pd vanilla
+
+### Connection Interaction
+
+**Selection**
+- Click to select
+- Multiple selection with Shift
+- Selected connections highlighted
+
+**Reconnection**  
+From `Connection.cpp:749-787`, reconnect handles allow redirecting:
+
+```cpp
+void Connection::reconnect(Iolet const* target)
+{
+    auto const& otherIolet = target == inlet ? outlet : inlet;
+    
+    // Support multiple connection reconnection with Shift
+    SmallArray<Connection*> connections = { this };
+    if (Desktop::getInstance().getMainMouseSource()
+            .getCurrentModifiers().isShiftDown()) {
+        for (auto* c : otherIolet->object->getConnections()) {
+            if (c == this || !c->isSelected()) continue;
+            connections.add(c);
+        }
+    }
+    
+    // Remove old connections and start new ones
+    for (auto* c : connections) {
+        cnv->patch.removeConnection(checkedOut, c->outIdx, 
+                                   checkedIn, c->inIdx, c->getPathState());
+        cnv->connectionsBeingCreated.add(
+            target->isInlet ? c->inlet : c->outlet, cnv);
+    }
+}
+```
+
+**Path Editing**
+- Drag segments to adjust waypoints (segmented mode)
+- Double-click to toggle segmented/curved
+- Right-click for path options
+
+### Connection Ordering
+
+From `Canvas.cpp:824-868`, connection rendering respects layering:
+
+```cpp
+void Canvas::renderAllConnections(NVGcontext* nvg, Rectangle<int> const area)
+{
+    SmallArray<Connection*> connectionsToDrawSelected;
+    Connection* hovered = nullptr;
+    
+    // Draw non-selected connections first
+    for (auto* connection : connections) {
+        if (connection->isMouseHovering())
+            hovered = connection;
+        else if (!connection->isSelected())
+            connection->render(nvg);
+        else
+            connectionsToDrawSelected.add(connection);
+    }
+    
+    // Draw selected connections on top
+    for (auto* connection : connectionsToDrawSelected) {
+        connection->render(nvg);
+    }
+    
+    // Draw hovered connection last (highest)
+    if (hovered) {
+        hovered->render(nvg);
+    }
+}
+```
+
+**Ordering Display**
+When multiple connections share an outlet, numbers show execution order.
+
+## Object Management
+
+### Canvas Object Management
+
+From `Canvas.cpp:1093-1231`, synchronization with Pure Data:
+
+```cpp
+void Canvas::performSynchronise()
+{
+    // Remove deleted objects
+    for (int n = objects.size() - 1; n >= 0; n--) {
+        if (auto* object = objects[n]; 
+            !object->getPointer() && !object->isInitialEditorShown()) {
+            setSelected(object, false, false);
+            objects.remove_at(n);
+        }
+    }
+    
+    // Add new objects from Pd
+    auto pdObjects = patch.getObjects();
+    for (auto object : pdObjects) {
+        auto const* it = std::ranges::find_if(objects, 
+            [&object](Object const* b) { 
+                return b->getPointer() == object.getRawUnchecked<void>(); 
+            });
+        
+        if (it == objects.end()) {
+            auto* newObject = objects.add(object, this);
+            newObject->toFront(false);
+        }
+    }
+    
+    // Sort to match Pd order
+    std::ranges::sort(objects,
+        [&pdObjects](Object const* first, Object const* second) {
+            return pdObjects.index_of(first->getPointer()) < 
+                   pdObjects.index_of(second->getPointer());
+        });
+}
+```
+
+### Object Selection
+
+Multiple selection modes:
+
+**Click Selection**
+- Single click: Select one
+- Shift + click: Add to selection  
+- Cmd/Ctrl + click: Toggle selection
+
+**Lasso Selection**  
+- Drag on canvas to select region
+- All contained objects selected
+- Works in edit mode only
+
+**Select All**
+- Cmd/Ctrl + A: Select all objects
+- Cmd/Ctrl + Shift + A: Deselect all
+
+### Object Alignment and Distribution
+
+From `Object.cpp:36-226`, the ObjectsResizer handles multi-object operations:
+
+```cpp
+class ObjectsResizer final : public Component
+{
+    enum class ResizerMode { Horizontal, Vertical };
+    
+    ObjectsResizer(Canvas* parentCanvas, 
+                   std::function<float(Rectangle<int>)> onResize,
+                   std::function<void(Point<int>)> onMove,
+                   ResizerMode const mode = ResizerMode::Horizontal)
+    {
+        // Handle simultaneous resizing of multiple objects
+        // Distribute spacing evenly
+        // Align to grid
+    }
+};
+```
+
+**Alignment Options**:
+- Align left/right/top/bottom
+- Distribute horizontally/vertically  
+- Align to grid
+- Even spacing
+
+## Advanced Features
+
+### HVCC Compatibility
+
+From `Object.cpp:139-148`, objects check compatibility:
+
+```cpp
+void Object::settingsChanged(String const& name, var const& value)
+{
+    if (name == "hvcc_mode") {
+        if (value)
+            isHvccCompatible = gui->checkHvccCompatibility();
+        else
+            isHvccCompatible = true;
+        repaint();
+    }
+}
+```
+
+Incompatible objects are highlighted when HVCC mode is enabled.
+
+### Object Activity Visualization
+
+From `Object.cpp:479-489`:
+
+```cpp
+void Object::triggerOverlayActiveState()
+{
+    if (!cnv->shouldShowObjectActivity())
+        return;
+    
+    activeStateAlpha = 1.0f;
+    activityStateFade.start();  // Animate fade-out
+}
+```
+
+Visual feedback shows which objects are processing data in real-time.
+
+### Graph on Parent (GOP)
+
+Subpatches can display their contents on the parent canvas:
+
+- Define visible area (x/y ranges)
+- Show/hide name and arguments
+- Create custom GUI objects
+- Encapsulate complex interfaces
+
+## Best Practices
+
+1. **Object Naming**: Use descriptive names for subpatches and abstractions
+2. **Connection Clarity**: Use segmented paths for complex patches
+3. **Visual Organization**: Group related objects together
+4. **Performance**: Minimize unnecessary signal connections
+5. **Modularity**: Use subpatches to organize functionality
+6. **Documentation**: Add tooltips and comments to objects
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Patching Basics" icon="pencil" href="/concepts/patching-basics">
+    Learn fundamental patching concepts
+  </Card>
+  <Card title="Plugin vs Standalone" icon="toggle-on" href="/concepts/plugin-vs-standalone">
+    Understand the different operating modes
+  </Card>
+</CardGroup>

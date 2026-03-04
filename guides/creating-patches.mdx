@@ -1,0 +1,479 @@
+---
+title: Creating Patches
+description: Complete workflow for creating Pure Data patches in plugdata - from basic objects to complex abstractions
+---
+
+# Creating Patches
+
+This guide covers the complete workflow for creating patches in plugdata, from placing your first object to building complex abstractions.
+
+## Creating Your First Patch
+
+<Steps>
+  <Step title="Create a New Patch">
+    Press **Cmd/Ctrl+N** or select **File > New** from the menu to create a new patch.
+  </Step>
+  
+  <Step title="Enter Edit Mode">
+    Ensure you're in edit mode (unlocked). The Edit button in the toolbar should be highlighted. Press **Cmd/Ctrl+E** to toggle between edit and run mode.
+  </Step>
+  
+  <Step title="Add Your First Object">
+    Press **Cmd/Ctrl+1** or click on the canvas and type to create an object. Try creating an `osc~ 440` object.
+  </Step>
+  
+  <Step title="Add Audio Output">
+    Create a `dac~` object to send audio to your output. Type **Cmd/Ctrl+1** and enter `dac~`.
+  </Step>
+  
+  <Step title="Make a Connection">
+    Click and drag from the outlet (bottom) of the `osc~` object to the inlet (top) of the `dac~` object to create a connection.
+  </Step>
+  
+  <Step title="Enable Audio">
+    Press **Cmd/Ctrl+.** or click the power button in the statusbar to enable DSP (Digital Signal Processing).
+  </Step>
+  
+  <Step title="Test Your Patch">
+    Switch to run mode with **Cmd/Ctrl+E**. You should hear a 440Hz tone.
+  </Step>
+</Steps>
+
+<Tip>
+Always start with audio output objects like `dac~` or `dac~ 1 2` for stereo output when working with audio signals.
+</Tip>
+
+## Creating Objects
+
+### Object Types
+
+Plugdata supports several types of objects:
+
+<Tabs>
+  <Tab title="Objects">
+    Standard Pure Data objects that process messages and signals.
+    
+    **Create:** Cmd/Ctrl+1 or right-click > Object
+    
+    Examples:
+    - `osc~ 440` - Oscillator at 440Hz
+    - `+` - Addition
+    - `metro 500` - Metronome at 500ms
+    - `print` - Print to console
+  </Tab>
+  
+  <Tab title="Messages">
+    Message boxes that send predefined values when clicked.
+    
+    **Create:** Cmd/Ctrl+2 or right-click > Message
+    
+    Examples:
+    - `1` - Send number 1
+    - `bang` - Send bang message
+    - `connect 4 5` - Send message with multiple elements
+  </Tab>
+  
+  <Tab title="Number Boxes">
+    Interactive number display and input.
+    
+    **Create:** Cmd/Ctrl+Shift+N
+    
+    - Click and drag vertically to change value
+    - Double-click to type exact value
+    - Connect to control parameters
+  </Tab>
+  
+  <Tab title="GUI Objects">
+    Visual interface elements for interaction.
+    
+    **Common GUI Objects:**
+    - **Bang** (Cmd/Ctrl+Shift+B) - Trigger
+    - **Toggle** (Cmd/Ctrl+Shift+T) - On/off switch
+    - **Vertical Slider** (Cmd/Ctrl+Shift+V)
+    - **Horizontal Slider** (Cmd/Ctrl+Shift+J)
+    - **Radio Buttons** (Cmd/Ctrl+Shift+D/I) - Vertical/horizontal
+  </Tab>
+  
+  <Tab title="Atoms">
+    Specialized object types for data display.
+    
+    - **Float Atom** (Cmd/Ctrl+3) - Number display/input
+    - **List Atom** (Cmd/Ctrl+4) - List display/input  
+    - **Symbol Atom** (Cmd/Ctrl+Shift+Y) - Symbol display/input
+  </Tab>
+  
+  <Tab title="Comments">
+    Text annotations for documentation.
+    
+    **Create:** Cmd/Ctrl+5
+    
+    - Non-functional text for documentation
+    - Resize to fit longer descriptions
+    - Use for patch instructions and labels
+  </Tab>
+</Tabs>
+
+### Creating Objects with Arguments
+
+Many objects accept creation arguments that configure their behavior:
+
+```pd
+osc~ 440          # Oscillator at 440Hz
+metro 1000        # Metro triggering every 1000ms  
+delay 500         # Delay by 500ms
+random 100        # Random numbers 0-99
++ 5               # Add 5 to input
+```
+
+<Note>
+Arguments are space-separated. Use quotes for symbols containing spaces: `"hello world"`
+</Note>
+
+### Object Editing
+
+To edit an object's text:
+
+1. **Double-click** the object in edit mode
+2. Modify the text
+3. Press **Enter** to confirm or **Escape** to cancel
+4. Hold **Shift+Enter** to add line breaks in messages and comments
+
+## Making Connections
+
+### Connection Basics
+
+Connections carry data between objects:
+
+<Steps>
+  <Step title="Identify Inlets and Outlets">
+    - **Inlets** appear at the top of objects (receive data)
+    - **Outlets** appear at the bottom of objects (send data)
+    - Hover over iolets to see their index and type
+  </Step>
+  
+  <Step title="Create a Connection">
+    Click and drag from an **outlet** to an **inlet**. The connection will highlight as you drag.
+  </Step>
+  
+  <Step title="Multiple Connections">
+    One outlet can connect to multiple inlets. Data is sent to all connected inlets.
+  </Step>
+  
+  <Step title="Delete Connections">
+    - Click a connection to select it (it turns orange)
+    - Press **Delete** or **Backspace**
+    - Or select an object and press **Cmd/Ctrl+Shift+K** to remove all its connections
+  </Step>
+</Steps>
+
+### Smart Connection Features
+
+**Auto-connect:**
+When enabled in settings, new objects automatically connect to selected objects.
+
+**Quick Connect:**
+Select two or more objects and press **Cmd/Ctrl+K** to automatically create connections.
+
+**Connection Styling:**
+Select a connection and press **Cmd/Ctrl+L** to cycle through:
+- Straight connections
+- Curved connections  
+- Segmented connections (with pathfinding)
+
+**Tidy Connections:**
+Select connections and press **Cmd/Ctrl+Shift+Y** to automatically route them cleanly.
+
+### Signal vs Message Connections
+
+Plugdata uses different visual styles for different data types:
+
+- **Thin lines** - Control messages (numbers, symbols, lists)
+- **Thick lines** - Audio signals (denoted by ~ in object names)
+
+<Warning>
+You cannot connect message outlets to signal inlets directly. Use `sig~` to convert messages to signals, or `snapshot~` to convert signals to messages.
+</Warning>
+
+## Organizing Your Patch
+
+### Layout Best Practices
+
+<Accordion title="Signal Flow">
+  Organize patches with signal flow from top to bottom or left to right:
+  - Input objects at the top
+  - Processing in the middle
+  - Output objects at the bottom
+  
+  This makes patches easier to read and debug.
+</Accordion>
+
+<Accordion title="Alignment and Spacing">
+  Use grid snapping for consistent alignment:
+  - Enable with Cmd/Ctrl+G
+  - Configure grid size in statusbar settings
+  - Select objects and use **Cmd/Ctrl+Shift+R** to tidy automatically
+</Accordion>
+
+<Accordion title="Grouping and Comments">
+  - Use comments (Cmd/Ctrl+5) to label sections
+  - Group related objects close together
+  - Leave space between functional groups
+  - Add visual separators with long comment boxes
+</Accordion>
+
+<Accordion title="Color Coding">
+  Customize object colors for organization:
+  - Select objects
+  - Open Inspector panel
+  - Set background and outline colors
+  - Use consistent color schemes across patches
+</Accordion>
+
+### Selection and Arrangement
+
+**Selecting Multiple Objects:**
+- Click and drag to create a selection box
+- Cmd/Ctrl+Click to add/remove from selection
+- Cmd/Ctrl+A to select all
+
+**Moving Objects:**
+- Drag selected objects
+- Use arrow keys for 1-pixel nudges
+- Hold Shift while using arrow keys for larger steps
+
+**Alignment Tools:**
+- **Tidy** (Cmd/Ctrl+Shift+R) - Auto-arrange selection
+- Grid snapping for manual alignment
+- Selection handles for precise positioning
+
+## Working with Subpatches
+
+### Creating Subpatches
+
+Subpatches help organize complex patches into modular components:
+
+<Steps>
+  <Step title="Create a Subpatch Object">
+    Press **Cmd/Ctrl+Shift+C** or create an object called `pd mysubpatch`
+  </Step>
+  
+  <Step title="Open the Subpatch">
+    Double-click the subpatch object to open it in the same window
+  </Step>
+  
+  <Step title="Add Inlets and Outlets">
+    - Create `inlet` objects for inputs
+    - Create `outlet` objects for outputs
+    - For audio: use `inlet~` and `outlet~`
+    - Number corresponds to the order on the parent object
+  </Step>
+  
+  <Step title="Return to Parent">
+    Click the patch name in the breadcrumb trail at the top of the canvas
+  </Step>
+</Steps>
+
+### Subpatch Example
+
+Parent patch:
+```pd
+[pd synth_voice]  # Subpatch with 2 inlets, 1 outlet
+```
+
+Inside `pd synth_voice`:
+```pd
+[inlet]           # First inlet (frequency)
+[inlet]           # Second inlet (amplitude)
+[osc~]
+[*~]
+[outlet~]         # Audio outlet
+```
+
+<Tip>
+Use descriptive names for subpatches like `pd audio-processing` or `pd control-logic` instead of generic names.
+</Tip>
+
+## Creating Abstractions
+
+Abstractions are reusable patches saved as separate files:
+
+<Steps>
+  <Step title="Create a New Patch">
+    Make a new patch with the functionality you want to reuse
+  </Step>
+  
+  <Step title="Add Inlets and Outlets">
+    Use `inlet`, `outlet`, `inlet~`, `outlet~` objects to define the interface
+  </Step>
+  
+  <Step title="Save with Descriptive Name">
+    Save the file with a meaningful name like `reverb-unit.pd` or `envelope-gen.pd`
+  </Step>
+  
+  <Step title="Use in Other Patches">
+    Create an object with the filename (without .pd extension): `reverb-unit`
+  </Step>
+</Steps>
+
+### Abstraction Arguments
+
+Abstractions can receive creation arguments:
+
+```pd
+# Inside oscillator.pd:
+[inlet]           # Trigger inlet
+[f $1]            # Use first argument as frequency
+[osc~]
+[outlet~]
+
+# Usage in parent patch:
+[oscillator 440]  # Creates oscillator at 440Hz
+[oscillator 880]  # Creates oscillator at 880Hz
+```
+
+**Argument Syntax:**
+- `$1`, `$2`, `$3`, etc. - Numbered creation arguments
+- `$0` - Unique ID for each instance (useful for local send/receive)
+
+<Note>
+Store abstractions in your search path or the same folder as your main patch to ensure plugdata can find them.
+</Note>
+
+## Using Send and Receive
+
+### Wireless Connections
+
+Send and receive objects create "wireless" connections, reducing visual clutter:
+
+```pd
+[send mydata]     # Sends to all [receive mydata]
+[s mydata]        # Shorthand
+
+[receive mydata]  # Receives from [send mydata]
+[r mydata]        # Shorthand
+```
+
+**For Audio Signals:**
+```pd
+[send~ audio-bus]
+[s~ audio-bus]
+
+[receive~ audio-bus]
+[r~ audio-bus]
+```
+
+### Local Send/Receive
+
+Use `$0` for instance-specific sends in abstractions:
+
+```pd
+[send $0-local]   # Unique to this instance
+[receive $0-local]
+```
+
+<Warning>
+Be careful with global send/receive names - they work across all open patches. Use descriptive names to avoid conflicts.
+</Warning>
+
+## Working with Arrays and Tables
+
+### Creating Arrays
+
+Arrays store data like waveforms, samples, or control envelopes:
+
+<Steps>
+  <Step title="Create Array">
+    Press **Cmd/Ctrl+Shift+A** or create object `array define myarray`
+  </Step>
+  
+  <Step title="Configure Size">
+    Set array size in the inspector or with: `array define myarray 1024`
+  </Step>
+  
+  <Step title="Visualize Data">
+    Right-click the array and choose "Properties" to configure display
+  </Step>
+  
+  <Step title="Access Data">
+    Use objects like `tabread myarray`, `tabwrite myarray`, `soundfiler` to read/write
+  </Step>
+</Steps>
+
+### Array Operations
+
+```pd
+# Read from array
+[tabread myarray]     # Read single value
+[tabread4~ myarray]   # Read with interpolation (audio rate)
+
+# Write to array  
+[tabwrite myarray]    # Write values
+[soundfiler]          # Load audio files into arrays
+
+# Array info
+[arraysize myarray]   # Get array length
+```
+
+## Graph-on-Parent
+
+Graph-on-Parent (GOP) creates custom GUI interfaces:
+
+<Steps>
+  <Step title="Create Subpatch">
+    Create a subpatch that will contain your GUI
+  </Step>
+  
+  <Step title="Enable Graph-on-Parent">
+    Right-click the canvas inside the subpatch > Properties > Check "Graph on Parent"
+  </Step>
+  
+  <Step title="Set GOP Area">
+    Configure the visible area size and position
+  </Step>
+  
+  <Step title="Add GUI Objects">
+    Place GUI objects within the GOP area - they'll be visible on the parent patch
+  </Step>
+</Steps>
+
+<Tip>
+Use GOP to create instrument interfaces, effect controls, or any custom GUI that hides internal complexity.
+</Tip>
+
+## Patch Organization Strategies
+
+### Modular Design
+
+1. **Break down complex patches** into logical subpatches
+2. **Create reusable abstractions** for common tasks
+3. **Use send/receive** for global routing
+4. **Document with comments** throughout
+
+### File Organization
+
+```
+my-project/
+├── main.pd           # Main patch
+├── abstractions/     # Reusable modules
+│   ├── reverb.pd
+│   ├── filter.pd  
+│   └── envelope.pd
+├── data/             # Arrays, samples
+│   └── samples.wav
+└── presets/          # Saved states
+```
+
+### Version Control
+
+- Save incremental versions during development
+- Use descriptive filenames: `synth-v1.pd`, `synth-v2.pd`
+- Export final versions to clean folders
+- Document changes in comments or separate text files
+
+## Next Steps
+
+Now that you understand patch creation:
+
+- [Using Objects](/guides/using-objects) - Learn about specific object types and techniques
+- [Automation Parameters](/guides/automation-parameters) - Set up DAW automation
+- [Audio Routing](/guides/audio-routing) - Master audio I/O and multichannel routing

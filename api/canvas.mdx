@@ -1,0 +1,372 @@
+---
+title: "Canvas"
+description: "Visual patch canvas and object management"
+---
+
+## Overview
+
+The `Canvas` class represents a Pure Data patch's visual canvas. It manages object creation, connections, selection, viewport, and rendering. Each canvas corresponds to one Pure Data patch (`pd::Patch`) and provides the interactive editing environment.
+
+Location: `Source/Canvas.h` and `Source/Canvas.cpp`
+
+## Class Hierarchy
+
+```cpp
+class Canvas final : public Component
+                   , public Value::Listener
+                   , public SettingsFileListener
+                   , public LassoSource<WeakReference<Component>>
+                   , public ModifierKeyListener
+                   , public pd::MessageListener
+                   , public AsyncUpdater
+                   , public NVGComponent
+                   , public ChangeListener
+```
+
+## Constructor
+
+```cpp
+Canvas(PluginEditor* parent, pd::Patch::Ptr patch, Component* parentGraph = nullptr);
+```
+
+<ParamField path="parent" type="PluginEditor*">
+  The plugin editor that owns this canvas.
+</ParamField>
+
+<ParamField path="patch" type="pd::Patch::Ptr">
+  The Pure Data patch this canvas represents.
+</ParamField>
+
+<ParamField path="parentGraph" type="Component*" default="nullptr">
+  Optional parent graph component (for graph-on-parent subpatches).
+</ParamField>
+
+## Key Properties
+
+<ResponseField name="editor" type="PluginEditor*">
+  Parent plugin editor.
+</ResponseField>
+
+<ResponseField name="pd" type="PluginProcessor*">
+  Reference to the plugin processor/Pure Data instance.
+</ResponseField>
+
+<ResponseField name="patch" type="pd::Patch&">
+  The underlying Pure Data patch.
+</ResponseField>
+
+<ResponseField name="viewport" type="std::unique_ptr<CanvasViewport>">
+  Viewport for scrolling and zooming the canvas.
+</ResponseField>
+
+<ResponseField name="objects" type="PooledPtrArray<Object>">
+  All objects on this canvas.
+</ResponseField>
+
+<ResponseField name="connections" type="PooledPtrArray<Connection>">
+  All patch connections on this canvas.
+</ResponseField>
+
+<ResponseField name="selectedComponents" type="SelectedItemSet<WeakReference<Component>>">
+  Currently selected objects and connections.
+</ResponseField>
+
+<ResponseField name="locked" type="Value">
+  Whether the canvas is in locked (run) mode vs edit mode.
+</ResponseField>
+
+<ResponseField name="presentationMode" type="Value">
+  Whether the canvas is in presentation mode (showing only GUI objects).
+</ResponseField>
+
+<ResponseField name="zoomScale" type="Value">
+  Current zoom level (1.0 = 100%).
+</ResponseField>
+
+## Object Management
+
+<ParamField path="synchronise" type="void">
+  ```cpp
+  void synchronise();
+  void performSynchronise();
+  void synchroniseAllCanvases();
+  ```
+  
+  Synchronize the visual canvas with the underlying Pure Data patch structure. Called after patch modifications to update the GUI.
+</ParamField>
+
+<ParamField path="updateDrawables" type="void">
+  ```cpp
+  void updateDrawables();
+  ```
+  
+  Update all drawable components on the canvas.
+</ParamField>
+
+## Selection and Editing
+
+<ParamField path="setSelected" type="void">
+  ```cpp
+  void setSelected(Component* component, bool shouldNowBeSelected, 
+                   bool updateCommandStatus = true, bool broadcastChange = true);
+  ```
+  
+  Select or deselect a component on the canvas.
+</ParamField>
+
+<ParamField path="deselectAll" type="void">
+  ```cpp
+  void deselectAll(bool broadcastChange = true);
+  ```
+  
+  Clear all selections.
+</ParamField>
+
+<ParamField path="getSelectionOfType" type="SmallArray<T*>">
+  ```cpp
+  template<typename T>
+  SmallArray<T*> getSelectionOfType();
+  ```
+  
+  Get all selected components of a specific type.
+  
+  Example:
+  ```cpp
+  auto selectedObjects = canvas->getSelectionOfType<Object>();
+  for (auto* obj : selectedObjects) {
+      // Process each selected object
+  }
+  ```
+</ParamField>
+
+## Clipboard Operations
+
+<ParamField path="copySelection" type="void">
+  ```cpp
+  void copySelection();
+  ```
+  
+  Copy selected objects to clipboard.
+</ParamField>
+
+<ParamField path="pasteSelection" type="void">
+  ```cpp
+  void pasteSelection();
+  ```
+  
+  Paste objects from clipboard.
+</ParamField>
+
+<ParamField path="duplicateSelection" type="void">
+  ```cpp
+  void duplicateSelection();
+  ```
+  
+  Duplicate selected objects in place.
+</ParamField>
+
+<ParamField path="removeSelection" type="void">
+  ```cpp
+  void removeSelection();
+  void removeSelectedConnections();
+  ```
+  
+  Delete selected objects or connections.
+</ParamField>
+
+<ParamField path="dragAndDropPaste" type="void">
+  ```cpp
+  void dragAndDropPaste(String const& patchString, Point<int> mousePos, 
+                        int patchWidth, int patchHeight, String const& name = String());
+  ```
+  
+  Paste objects at a specific position (used for drag-and-drop).
+</ParamField>
+
+## Advanced Editing
+
+<ParamField path="encapsulateSelection" type="void">
+  ```cpp
+  void encapsulateSelection();
+  ```
+  
+  Wrap selected objects in a subpatch.
+</ParamField>
+
+<ParamField path="tidySelection" type="void">
+  ```cpp
+  void tidySelection();
+  ```
+  
+  Auto-arrange selected objects neatly.
+</ParamField>
+
+<ParamField path="alignObjects" type="void">
+  ```cpp
+  void alignObjects(Align alignment);
+  ```
+  
+  Align selected objects (left, right, top, bottom, center).
+</ParamField>
+
+<ParamField path="connectSelection" type="void">
+  ```cpp
+  void connectSelection();
+  ```
+  
+  Auto-connect selected objects where possible.
+</ParamField>
+
+## Undo/Redo
+
+<ParamField path="undo" type="void">
+  ```cpp
+  void undo();
+  void redo();
+  ```
+  
+  Undo or redo the last action on this canvas.
+</ParamField>
+
+## Viewport and Navigation
+
+<ParamField path="zoomToFitAll" type="void">
+  ```cpp
+  void zoomToFitAll();
+  ```
+  
+  Zoom to fit all objects in the viewport.
+</ParamField>
+
+<ParamField path="jumpToOrigin" type="void">
+  ```cpp
+  void jumpToOrigin();
+  ```
+  
+  Reset viewport to origin (0, 0).
+</ParamField>
+
+<ParamField path="saveViewportState" type="void">
+  ```cpp
+  void saveViewportState();
+  void restoreViewportState();
+  ```
+  
+  Save and restore viewport position and zoom.
+</ParamField>
+
+## Rendering
+
+<ParamField path="performRender" type="void">
+  ```cpp
+  void performRender(NVGcontext* nvg, Rectangle<int> invalidRegion);
+  void renderAllObjects(NVGcontext* nvg, Rectangle<int> area);
+  void renderAllConnections(NVGcontext* nvg, Rectangle<int> area);
+  ```
+  
+  Render the canvas using NanoVG. Called automatically by the rendering system.
+</ParamField>
+
+## Overlays and Display Options
+
+<ParamField path="shouldShowObjectActivity" type="bool">
+  ```cpp
+  bool shouldShowObjectActivity() const;
+  bool shouldShowIndex() const;
+  bool shouldShowConnectionDirection() const;
+  bool shouldShowConnectionActivity() const;
+  ```
+  
+  Query current overlay display settings.
+</ParamField>
+
+## File Operations
+
+<ParamField path="save" type="void">
+  ```cpp
+  void save(std::function<void()> const& nestedCallback = [] { });
+  void saveAs(std::function<void()> const& nestedCallback = [] { });
+  ```
+  
+  Save the patch to disk. Optionally provide a callback to execute after save completes.
+</ParamField>
+
+## Message Handling
+
+<ParamField path="receiveMessage" type="void">
+  ```cpp
+  void receiveMessage(t_symbol* symbol, SmallArray<pd::Atom> const& atoms) override;
+  ```
+  
+  Receive messages from Pure Data (implements `pd::MessageListener`).
+</ParamField>
+
+## Suggestions and Autocomplete
+
+<ParamField path="showSuggestions" type="void">
+  ```cpp
+  void showSuggestions(Object* object, TextEditor* textEditor);
+  void hideSuggestions();
+  ```
+  
+  Show or hide object name suggestions while typing.
+</ParamField>
+
+## Inspector Integration
+
+<ParamField path="getInspectorParameters" type="ObjectParameters&">
+  ```cpp
+  ObjectParameters& getInspectorParameters();
+  ```
+  
+  Get parameters for the inspector panel.
+</ParamField>
+
+## Constants
+
+<ResponseField name="infiniteCanvasSize" type="static constexpr int">
+  Maximum canvas size: **128,000** pixels
+</ResponseField>
+
+## Usage Example
+
+```cpp
+// Create a canvas for a patch
+auto patch = pd->openPatch(File("/path/to/patch.pd"));
+auto* canvas = new Canvas(editor, patch);
+
+// Lock/unlock the canvas
+canvas->locked.setValue(true);  // Lock (run mode)
+canvas->locked.setValue(false); // Unlock (edit mode)
+
+// Work with selections
+canvas->selectAll();
+auto selectedObjs = canvas->getSelectionOfType<Object>();
+canvas->alignObjects(Align::Left);
+canvas->tidySelection();
+
+// Clipboard operations
+canvas->copySelection();
+canvas->pasteSelection();
+
+// Viewport control
+canvas->zoomToFitAll();
+canvas->saveViewportState();
+
+// Undo/redo
+canvas->undo();
+canvas->redo();
+
+// Save the patch
+canvas->save([](){ 
+    DBG("Save complete!"); 
+});
+```
+
+## See Also
+
+- `Object` - Individual patch objects
+- `Connection` - Patch cord connections
+- `PluginEditor` - Editor window
+- `pd::Patch` - Underlying Pure Data patch
+- `CanvasViewport` - Viewport and scrolling

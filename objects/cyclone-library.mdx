@@ -1,0 +1,354 @@
+---
+title: Cyclone Library
+description: Max/MSP compatibility layer with 220+ objects for patch porting
+---
+
+Cyclone is a library of Pure Data objects that clone the functionality of Max/MSP objects, making it easier to port patches between the two environments. It includes over 220 objects covering audio processing, control flow, and data manipulation.
+
+## Overview
+
+Cyclone was created to provide Max/MSP compatibility in Pure Data, allowing patches to be ported with minimal changes. While very useful for compatibility, **ELSE library objects are generally preferred** when not specifically porting from Max.
+
+### Key Features
+
+- **220+ Max/MSP clones** covering most common Max objects
+- **High compatibility** with Max patch behavior
+- **Familiar names** for Max users (gate, counter, cycle~, etc.)
+- **Well-tested** implementations of Max algorithms
+
+<Note>
+When choosing between Cyclone and ELSE versions of the same object, prefer ELSE unless you specifically need Max/MSP compatibility. ELSE objects typically have richer features and better documentation.
+</Note>
+
+## Object Categories
+
+Cyclone objects mirror Max/MSP's organization:
+
+<CardGroup cols={2}>
+  <Card title="Audio Generators" icon="wave-sine">
+    Oscillators, noise, and signal sources
+  </Card>
+  <Card title="Audio Processing" icon="sliders">
+    Filters, effects, and signal manipulation
+  </Card>
+  <Card title="Control Flow" icon="code-branch">
+    Logic, routing, and message processing
+  </Card>
+  <Card title="Data Structures" icon="table">
+    Collections, tables, and data storage
+  </Card>
+  <Card title="Math & Logic" icon="calculator">
+    Mathematical operations and comparisons
+  </Card>
+  <Card title="MIDI" icon="music">
+    MIDI input, output, and processing
+  </Card>
+</CardGroup>
+
+## Common Objects
+
+Here are frequently-used Cyclone objects organized by function:
+
+### Audio Generators
+
+<AccordionGroup>
+  <Accordion title="Oscillators">
+    **cycle~** - Sinusoidal oscillator (Max equivalent of osc~)
+    
+    **saw~** - Sawtooth oscillator
+    
+    **tri~** - Triangle wave oscillator
+    
+    **rect~** - Rectangular/pulse wave oscillator
+    
+    **phasor~** - Ramp/sawtooth generator
+    
+    <Warning>
+    Cyclone oscillators are **not bandlimited** and will alias at high frequencies. For better audio quality, use ELSE bandlimited oscillators (bl.saw~, bl.square~, etc.)
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Noise Generators">
+    **rand~** - White noise generator
+    
+    **pink~** - Pink noise (1/f spectrum)
+  </Accordion>
+</AccordionGroup>
+
+### Audio Processing
+
+<AccordionGroup>
+  <Accordion title="Filters">
+    **svf~** - State variable filter (LP/HP/BP/BR modes)
+    
+    **biquad~** - Biquad filter
+    
+    **allpass~** - Allpass filter
+    
+    **comb~** - Comb filter
+    
+    **reson~** - Resonant bandpass filter
+  </Accordion>
+
+  <Accordion title="Effects & Modulation">
+    **delay~** - Simple delay line
+    
+    **tapout~**, **tapin~** - Tap delay system
+    
+    **phaseshift~** - Phaser effect
+  </Accordion>
+
+  <Accordion title="Dynamics">
+    **average~** - Running average
+    
+    **slide~** - Exponential smoother
+    
+    **snapshot~** - Sample signal value
+  </Accordion>
+</AccordionGroup>
+
+### Control Flow
+
+<AccordionGroup>
+  <Accordion title="Routing & Selection">
+    **gate** - Route messages to selected outlet
+    
+    **switch** - Route input to selected outlet
+    
+    **selector** - Select from multiple inputs
+    
+    **split** - Split numbers by range
+    
+    **route** - Route messages by selector (enhanced vanilla route)
+  </Accordion>
+
+  <Accordion title="Logic & Comparison">
+    `==`, `!=`, `>`, `<`, `>=`, `<=` - Comparison operators
+    
+    `&&`, `||` - Logical AND/OR
+    
+    `!` - Logical NOT
+  </Accordion>
+
+  <Accordion title="Counters & Timing">
+    **counter** - Counting object with min/max/wrap
+    
+    **metro** - Metronome (alternative to vanilla metro)
+    
+    **delay** - Delay messages (alternative to vanilla del)
+    
+    **clocker** - Multi-output metronome
+  </Accordion>
+</AccordionGroup>
+
+### Data Structures
+
+<AccordionGroup>
+  <Accordion title="Collections">
+    **coll** - Named collection/dictionary storage
+    
+    **table** - Data table with indexing
+    
+    **bucket** - Randomize lists and sequences
+  </Accordion>
+
+  <Accordion title="Lists & Arrays">
+    **zl** - List processing (multiple modes)
+    
+    **join** - Join multiple lists
+    
+    **thresh** - Threshold/debounce values
+  </Accordion>
+</AccordionGroup>
+
+### Math Operations
+
+<AccordionGroup>
+  <Accordion title="Basic Math">
+    **accum** - Accumulator (add/multiply to value)
+    
+    **scale** - Scale/map values from one range to another
+    
+    **clip** - Constrain values to range
+    
+    **abs** - Absolute value
+  </Accordion>
+
+  <Accordion title="Trigonometry">
+    **asin**, **acos**, **atan**, **atan2** - Inverse trig functions
+    
+    **sinh**, **cosh**, **tanh** - Hyperbolic functions
+    
+    **asinh**, **acosh**, **atanh** - Inverse hyperbolic
+  </Accordion>
+
+  <Accordion title="Advanced Math">
+    **pow** - Exponentiation
+    
+    **log**, **ln** - Logarithms
+    
+    **sqrt** - Square root
+  </Accordion>
+</AccordionGroup>
+
+### MIDI
+
+<AccordionGroup>
+  <Accordion title="MIDI I/O">
+    **midiparse** - Parse MIDI messages
+    
+    **midiformat** - Format MIDI messages
+  </Accordion>
+</AccordionGroup>
+
+## Max/MSP Compatibility
+
+### Object Name Mapping
+
+Most Cyclone objects use identical names to their Max counterparts:
+
+| Max Object | Cyclone/PD | Notes |
+|------------|------------|-------|
+| cycle~ | cycle~ | Same name |
+| counter | counter | Same name |
+| coll | coll | Same name |
+| gate | gate | Same name |
+| osc~ | osc~ | Use vanilla [osc~] or ELSE [sine~] |
+| scale | scale | Same name |
+
+### Porting Max Patches
+
+When porting from Max/MSP:
+
+1. **Install Cyclone** - Already included in plugdata
+2. **Check object names** - Most work identically
+3. **Test behavior** - Some edge cases may differ
+4. **Replace incompatible objects** - Not all Max objects are cloned
+5. **Consider ELSE alternatives** - Often better for new work
+
+### Known Differences
+
+While Cyclone aims for high compatibility, some differences exist:
+
+- **GUI objects** - Max's UI objects are not included
+- **Gen/Codebox** - Not supported (use Heavy or pd-lua instead)
+- **MSP-specific features** - Some Max-only features unavailable
+- **Timing precision** - Minor differences in scheduling
+
+## Cyclone vs. ELSE
+
+Many objects exist in both libraries. Here's when to choose each:
+
+### Choose Cyclone
+
+✅ **Use Cyclone when:**
+- Porting patches from Max/MSP
+- Need exact Max behavior compatibility
+- Working with Max-specific workflows
+- Collaborating with Max users
+
+### Choose ELSE
+
+✅ **Use ELSE when:**
+- Starting a new patch from scratch
+- Need bandlimited oscillators (better sound)
+- Want comprehensive documentation
+- Need GUI objects
+- Working exclusively in plugdata
+
+### Example: Oscillators
+
+**Cyclone approach (Max compatible):**
+```pd
+[cycle~ 440]  // Simple sine wave, may alias
+```
+
+**ELSE approach (better quality):**
+```pd
+[bl.osc~ sine 440]  // Bandlimited, no aliasing
+```
+
+### Example: Filtering
+
+**Cyclone approach:**
+```pd
+[svf~ 1000 0.7]  // State variable filter
+```
+
+**ELSE approach:**
+```pd
+[svf~ 1000 0.7]  // ELSE also has svf~, choose based on preference
+```
+
+## Performance
+
+- **CPU Usage** - Generally similar to vanilla/ELSE equivalents
+- **Memory** - Minimal overhead
+- **Audio Quality** - Non-bandlimited oscillators will alias
+
+<Tip>
+For production audio work, prefer ELSE bandlimited oscillators over Cyclone's standard oscillators to avoid aliasing artifacts.
+</Tip>
+
+## Documentation
+
+Cyclone objects include help patches:
+
+1. **Right-click object** → "Help"
+2. **Press Cmd/Ctrl + H** with object selected
+3. Help patches document:
+   - Inlets and outlets
+   - Arguments
+   - Basic usage examples
+
+<Note>
+Cyclone help patches are often less detailed than ELSE. For comprehensive examples, consult Max/MSP documentation or ELSE alternatives.
+</Note>
+
+## Using Cyclone Objects
+
+### Explicit Library Prefix
+
+If both ELSE and Cyclone have the same object name, specify which to use:
+
+```pd
+[cyclone/gate]  // Explicitly use Cyclone version
+[else/gate]     // Explicitly use ELSE version  
+[gate]          // Use whichever loads first (usually ELSE)
+```
+
+### Finding Cyclone Objects
+
+In the object browser:
+
+1. Open browser (`Cmd/Ctrl + Shift + N`)
+2. Filter by "cyclone" library
+3. Browse categories or search by name
+
+## Complete Object List
+
+Cyclone includes 220+ objects. Here's a sampling by category:
+
+### Audio Objects (~)
+
+<Accordion title="Signal Generators & Processing">
+  accum, allpass~, asin~, average~, biquad~, cartopol~, clip~, comb~, cosx~, cycle~, delay~, delta~, deltaclip~, edge~, frameaccum~, framedelta~, index~, kink~, lookup~, minmax~, mstosamps~, onepole~, peek~, phasewrap~, phaseshift~, pink~, play~, poke~, poltocar~, pong~, pow~, rampsmooth~, rand~, record~, reson~, sah~, sampstoms~, saw~, scope~, snapshot~, spike~, svf~, tanh~, train~, trapezoid~, tri~, wave~, zerox~
+</Accordion>
+
+### Control Objects
+
+<Accordion title="Data & Logic">
+  accum, anal, asin, bangbang, bucket, capture, cartopol, clip, coll, counter, cycle, decide, drunk, flush, forward, fromsymbol, funbuff, funnel, gate, grab, histo, iter, match, maximum, mean, minimum, mousefilter, mousestate, next, offer, onebang, past, peak, poltocar, prob, pv, scale, seq, speedlim, spell, split, spray, sprintf, substitute, sustain, switch, table, thresh, timer, tosymbol, trough, universal, unjoin, urn, xbendin, xbendout, xnotein, xnoteout, Clip, Line, Scope, Table, Uzi, bucket, zl
+</Accordion>
+
+## External Resources
+
+- **Cyclone Repository** - [github.com/porres/pd-cyclone](https://github.com/porres/pd-cyclone)
+- **Max/MSP Documentation** - Reference for object behavior
+- **Porting Guide** - Community guides for Max→PD conversion
+
+## Related Documentation
+
+- [ELSE Library](/objects/else-library) - Preferred alternative to Cyclone
+- [Vanilla Objects](/objects/vanilla-objects) - Core Pure Data objects
+- [Objects Overview](/objects/overview) - All available libraries

@@ -1,0 +1,297 @@
+---
+title: Interface Overview
+description: A comprehensive tour of the plugdata interface including the canvas, sidebar, statusbar, and essential workflow tools
+---
+
+# Interface Overview
+
+Plugdata features a modern, intuitive interface designed for efficient patching workflows. This guide introduces you to the main components of the interface and essential navigation techniques.
+
+## Main Interface Components
+
+The plugdata interface consists of several key areas:
+
+### Toolbar
+
+The top toolbar provides quick access to essential functions:
+
+- **Menu Button** - Access file operations, settings, and application commands
+- **Undo/Redo** - Navigate patch history (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)
+- **Edit/Run/Present Buttons** - Switch between editing modes
+  - **Edit Mode** (Cmd/Ctrl+E) - Unlocked for editing patches
+  - **Run Mode** (Cmd/Ctrl+E) - Locked for performance and interaction
+  - **Presentation Mode** - Shows only objects marked for presentation
+- **Plugin Mode Button** - Toggle between full editor and DAW-embedded view (plugin only)
+
+### Canvas
+
+The canvas is your main workspace for creating and editing Pure Data patches:
+
+- **Grid** - Visual grid for object alignment (toggle snapping with Cmd/Ctrl+G)
+- **Zoom Controls** - Scale your view for detail work or overview
+- **Pan** - Hold Space to pan around large patches
+- **Selection** - Click and drag to select multiple objects
+
+<Note>
+The canvas supports multi-touch gestures on compatible devices for zooming and panning.
+</Note>
+
+### Sidebar
+
+The right sidebar contains multiple panels accessible via tabs:
+
+<Tabs>
+  <Tab title="Console">
+    Displays messages, errors, and warnings from your patch:
+    - **Messages** - Print output from [print] objects
+    - **Errors** - Compilation and runtime errors in red/orange
+    - **Settings** - Clear, restore, filter messages/errors, toggle autoscroll
+    - **Click messages** - Jump to the originating object
+  </Tab>
+  
+  <Tab title="Documentation Browser">
+    Browse and search Pure Data object documentation:
+    - Search through ELSE, Cyclone, and vanilla Pd objects
+    - View object references and help patches
+    - Quick access to object descriptions and examples
+  </Tab>
+  
+  <Tab title="Automation Parameters">
+    Manage DAW automation parameters (plugin mode):
+    - Create and organize [param] objects
+    - Set parameter ranges and modes
+    - Drag parameters to canvas to create [param] objects
+  </Tab>
+  
+  <Tab title="Search">
+    Search within the current patch:
+    - Find objects by name or text content
+    - Navigate search results
+    - Highlight found objects on canvas
+  </Tab>
+</Tabs>
+
+**Inspector Panel**
+
+The inspector (wrench icon) shows properties for selected objects:
+- **Auto Mode** - Shows properties when objects are selected
+- **Pinned Mode** - Keeps inspector visible
+- **Hidden Mode** - Hides inspector completely
+
+<Tip>
+Use Cmd/Ctrl+] to toggle the sidebar visibility for maximum canvas space.
+</Tip>
+
+### Object Palette
+
+Access the floating object palette with Cmd/Ctrl+[ to quickly add common objects:
+
+- Drag objects directly onto the canvas
+- Organized by categories (oscillators, filters, GUI, etc.)
+- Create custom palettes for your workflow
+- Save frequently-used object combinations
+
+### Statusbar
+
+The bottom statusbar displays essential information and controls:
+
+**Left Section:**
+- **DSP Toggle** - Enable/disable audio processing (Cmd/Ctrl+.)
+- **Volume Control** - Master output level with limiter
+- **Audio/MIDI Indicators** - Show activity with visual feedback
+- **CPU Meter** - Monitor processing load
+
+**Center Section:**
+- **Zoom Level** - Current canvas zoom percentage
+- **Zoom Controls** - Zoom in/out or fit to view
+  - Zoom In: Cmd/Ctrl++
+  - Zoom Out: Cmd/Ctrl+-
+  - Zoom 100%: Cmd/Ctrl+0
+  - Fit All: Cmd/Ctrl+Shift+)
+- **Grid Settings** - Configure snap-to-grid behavior
+
+**Right Section:**
+- **Latency Display** - Current audio latency
+- **Oversampling** - Toggle oversampling for DSP
+- **Help Button** - Quick access to help resources
+
+## Navigation and Zoom
+
+### Zoom Controls
+
+<Steps>
+  <Step title="Mouse Wheel Zoom">
+    Scroll with Cmd/Ctrl held to zoom in/out at cursor position
+  </Step>
+  
+  <Step title="Trackpad Gestures">
+    Use pinch-to-zoom on trackpads and touch devices
+  </Step>
+  
+  <Step title="Keyboard Shortcuts">
+    - Cmd/Ctrl++ to zoom in
+    - Cmd/Ctrl+- to zoom out
+    - Cmd/Ctrl+0 to reset to 100%
+  </Step>
+  
+  <Step title="Zoom to Fit">
+    Cmd/Ctrl+Shift+) fits all objects in the viewport
+  </Step>
+</Steps>
+
+### Panning
+
+- **Space + Drag** - Pan around the canvas
+- **Cmd/Ctrl+9** - Jump to origin (0, 0)
+- **Middle Mouse Drag** - Pan (if supported)
+- **Two-finger drag** - Pan on trackpads
+
+## Essential Keyboard Shortcuts
+
+Master these shortcuts to dramatically speed up your workflow:
+
+### File Operations
+- **Cmd/Ctrl+N** - New patch
+- **Cmd/Ctrl+O** - Open patch
+- **Cmd/Ctrl+S** - Save patch
+- **Cmd/Ctrl+Shift+S** - Save as
+- **Cmd/Ctrl+W** - Close tab
+
+### Editing
+- **Cmd/Ctrl+1** - Create object
+- **Cmd/Ctrl+2** - Create message
+- **Cmd/Ctrl+3** - Create float atom
+- **Cmd/Ctrl+4** - Create list atom
+- **Cmd/Ctrl+5** - Create comment
+- **Cmd/Ctrl+E** - Toggle edit/run mode
+- **Cmd/Ctrl+D** - Duplicate selection
+- **Cmd/Ctrl+K** - Create connection between selected objects
+- **Cmd/Ctrl+Shift+K** - Remove all connections from selection
+
+### Selection and Clipboard
+- **Cmd/Ctrl+A** - Select all
+- **Cmd/Ctrl+C** - Copy
+- **Cmd/Ctrl+X** - Cut
+- **Cmd/Ctrl+V** - Paste
+- **Delete/Backspace** - Delete selection
+
+### Object Creation (with Shift)
+- **Cmd/Ctrl+Shift+B** - Bang
+- **Cmd/Ctrl+Shift+T** - Toggle
+- **Cmd/Ctrl+Shift+N** - Number box
+- **Cmd/Ctrl+Shift+V** - Vertical slider
+- **Cmd/Ctrl+Shift+J** - Horizontal slider
+- **Cmd/Ctrl+Shift+C** - Subpatch (canvas)
+- **Cmd/Ctrl+Shift+A** - Array
+- **Cmd/Ctrl+Shift+G** - Graph-on-parent
+
+### View
+- **Cmd/Ctrl+B** - Toggle documentation browser
+- **Cmd/Ctrl+F** - Search in current patch
+- **Cmd/Ctrl+]** - Toggle sidebar
+- **Cmd/Ctrl+[** - Toggle palettes
+- **F1** - Open object reference (with object selected)
+- **F2** - Open help patch (with object selected)
+- **Shift+?** - Object browser
+
+### Navigation
+- **Tab** - Cycle through objects
+- **Arrow Keys** - Nudge selected objects by 1 pixel
+- **Cmd/Ctrl+PageDown** - Next tab
+- **Cmd/Ctrl+PageUp** - Previous tab
+
+<Tip>
+Access the full list of keyboard shortcuts and customize them in Settings > Key Mapping.
+</Tip>
+
+## Workspace Customization
+
+### Theme and Appearance
+
+Plugdata supports both light and dark themes:
+
+1. Open **Settings** (Cmd/Ctrl+,)
+2. Navigate to **Theme** panel
+3. Choose from built-in themes or create custom themes
+4. Adjust object colors, font sizes, and UI scaling
+
+### Grid and Snapping
+
+<Steps>
+  <Step title="Enable Grid Snapping">
+    Click the grid icon in the statusbar or press Cmd/Ctrl+G
+  </Step>
+  
+  <Step title="Configure Grid Size">
+    Click the settings icon next to the grid toggle to adjust grid spacing
+  </Step>
+  
+  <Step title="Fine Control">
+    Hold Shift while dragging to temporarily disable snapping
+  </Step>
+</Steps>
+
+### Inspector Behavior
+
+Configure how the inspector panel displays:
+
+1. Click the **wrench icon** in the sidebar to cycle through modes:
+   - **Hidden** - Inspector panel is hidden
+   - **Auto** - Shows automatically when objects are selected
+   - **Pinned** - Always visible
+
+2. The inspector displays properties for selected objects:
+   - **Dimensions** - Size and position
+   - **General** - Object-specific settings
+   - **Appearance** - Colors, fonts, borders
+   - **Label** - Label text and positioning
+
+<Note>
+When multiple objects are selected, the inspector shows only properties common to all selected objects.
+</Note>
+
+## Working with Multiple Patches
+
+### Tab Management
+
+- **New Tab** - Cmd/Ctrl+N creates a new patch in a new tab
+- **Switch Tabs** - Click tab headers or use Cmd/Ctrl+PageUp/PageDown
+- **Close Tab** - Click the X on the tab or press Cmd/Ctrl+W
+- **Reorder Tabs** - Drag tab headers to rearrange
+
+### Subpatches and Abstractions
+
+Double-click a subpatch or abstraction to open it:
+- Opens in the same tab (navigate back with breadcrumb trail)
+- View parent patch and subpatches simultaneously
+- Edit subpatches in context
+
+## Performance Tips
+
+<Accordion title="Optimize Large Patches">
+  - Use **Presentation Mode** to hide complexity during performance
+  - Disable unused GUI objects in run mode
+  - Minimize console output in production patches
+  - Use subpatches to organize and reduce visual complexity
+</Accordion>
+
+<Accordion title="Efficient Object Placement">
+  - Enable grid snapping for consistent alignment
+  - Use Cmd/Ctrl+Shift+R to tidy selected objects
+  - Group related objects in subpatches
+  - Use send/receive for cleaner patch layouts
+</Accordion>
+
+<Accordion title="Monitor System Resources">
+  - Watch the CPU meter in the statusbar
+  - Check the latency display for audio buffer performance  
+  - Monitor console for error messages
+  - Use the limiter to prevent output clipping
+</Accordion>
+
+## Next Steps
+
+Now that you're familiar with the interface, explore:
+
+- [Creating Patches](/guides/creating-patches) - Learn the fundamentals of building Pd patches
+- [Using Objects](/guides/using-objects) - Master object creation and connection techniques
